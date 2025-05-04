@@ -1,31 +1,8 @@
-import { syntaxHighlight } from "./editor"
+import { HISTORY_LOG_ELEMENTS, HistoryLog } from "./logs"
 
-const HISTORY_LOG_ELEMENTS: HTMLDivElement[] = []
+export type Id = [agent: string, seq: number]
 
-export function HistoryLog(...data: any[]) {
-  const container = document.createElement("div")
-  container.className = "history-entry"
-
-  data.forEach((d) => {
-    const block = document.createElement("div")
-
-    if (typeof d === 'object' && d !== null) {
-      block.className = "log-object"
-      block.innerHTML = `<pre>${syntaxHighlight(d)}</pre>`
-    } else {
-      block.className = "log-text"
-      block.textContent = String(d)
-    }
-
-    container.appendChild(block)
-  })
-
-  HISTORY_LOG_ELEMENTS.push(container)
-}
-
-type Id = [agent: string, seq: number]
-
-type Item = {
+export type Item = {
   content: string, // 1 character
 
   id: Id,
@@ -35,9 +12,9 @@ type Item = {
   deleted: boolean,
 }
 
-type Version = Record<string, number>
+export type Version = Record<string, number>
 
-type Doc = {
+export type Doc = {
   content: Item[],
   version: Version,
 }
@@ -162,10 +139,11 @@ function integrate(doc: Doc, newItem: Item) {
     ? doc.content.length :
     findItemIdxById(doc, newItem.originRight)!
 
+  HistoryLog({ type: "doc", "doc": deepCloneDoc(doc) })
+
   let IntegrateLog: any[] = [{
-    "integrate": { left, right },
+    "integrate": { "originleft": left, "originright": right },
     "newItem": newItem,
-    "doc": deepCloneDoc(doc)
   }]
 
   let scanning = false
@@ -194,16 +172,16 @@ function integrate(doc: Doc, newItem: Item) {
   for (let i = destIdx; ; i++) {
     if (!scanning) {
       destIdx = i
-      IntegrateLog.push(`scanning false ${destIdx}`)
+      IntegrateLog.push(`> scanning false ${destIdx}`)
     }
 
     if (i === doc.content.length) {
-      IntegrateLog.push("--------- If we reach the end of the document, just insert")
+      IntegrateLog.push("> If we reach the end of the document, just insert")
       break
     }
 
     if (i === right) {
-      IntegrateLog.push(`--------- No ambiguity / concurrency. Insert here ${i} ${right}`)
+      IntegrateLog.push(`> i:${i} right:${right} No ambiguity / concurrency. Insert here`)
       break
     }
 
@@ -227,7 +205,7 @@ function integrate(doc: Doc, newItem: Item) {
     // This is the same code as the above 2 lines, but written out the long way:
     if (oleft < left) {
 
-      IntegrateLog.push(`--------- oleft < left break ${destIdx}`)
+      IntegrateLog.push(`> destIdx:${destIdx} oleft < left break`)
 
       // Top row. Insert, insert, arbitrary (insert)
       break
@@ -236,35 +214,27 @@ function integrate(doc: Doc, newItem: Item) {
       if (oright < right) {
         // This is tricky. We're looking at an item we *might* insert after - but we can't tell yet!
         scanning = true
-
-        IntegrateLog.push(`--------- oleft === left oright < right scanning true continue ${destIdx}`)
-
+        IntegrateLog.push(`> destIdx:${destIdx} oleft === left oright < right scanning true continue`)
         continue
       } else if (oright === right) {
         // Raw conflict. Order based on user agents.
         if (newItem.id[0] < other.id[0]) {
-
-          IntegrateLog.push(`--------- oleft == left oright == right newItem.id[0] < other.id[0] break ${destIdx}`)
-
+          IntegrateLog.push(`> destIdx:${destIdx} oleft == left oright == right newItem.id[0] < other.id[0] break`)
           break
         }
         else {
           scanning = false
-
-          IntegrateLog.push(`--------- oleft == left oright == right scanning false continue ${destIdx}`)
-
+          IntegrateLog.push(`> destIdx:${destIdx} oleft == left oright == right scanning false continue`)
           continue
         }
       } else { // oright > right
         scanning = false
-
-        IntegrateLog.push(`--------- oleft == left oright == right scanning false continue ${destIdx}`)
-
+        IntegrateLog.push(`> destIdx:${destIdx} oleft == left oright == right scanning false continue`)
         continue
       }
     } else { // oleft > left
       // Bottom row. Arbitrary (skip), skip, skip
-      IntegrateLog.push(`--------- oleft > left continue ${destIdx}`)
+      IntegrateLog.push(`> destIdx:${destIdx} oleft > left continue`)
 
       continue
     }
@@ -273,9 +243,11 @@ function integrate(doc: Doc, newItem: Item) {
   // We've found the position. Insert here.
   doc.content.splice(destIdx, 0, cloneItem(newItem))
 
-  IntegrateLog.push({ "--------- destIdx": destIdx, "doc": deepCloneDoc(doc) })
+  IntegrateLog.push(`> destIdx ${destIdx}`)
 
   HistoryLog(IntegrateLog)
+
+  HistoryLog({ type: "doc", "doc": deepCloneDoc(doc) })
 }
 
 function isInVersion(id: Id | null, version: Version): boolean {

@@ -11,13 +11,19 @@
 * [Lets write Eg-walker from scratch! Part 1](https://www.youtube.com/watch?v=ggXka5TTsOs)
 * [Lets write Eg-walker from scratch! Part 2](https://www.youtube.com/watch?v=QLOWuvxwr2M)
 
+* [How to Write a Figma Clone with CRDTs](https://www.youtube.com/watch?v=MvwBw5p5vUU)
+
 * [Conflict-Free Replicated Data Types (CRDT) for Distributed JavaScript Apps](https://www.youtube.com/watch?v=M8-WFTjZoA0)
 * [CRDTs: The Hard Parts](https://www.youtube.com/watch?v=x7drE24geUw)
 * [CRDTs and the Quest for Distributed Consistency](https://www.youtube.com/watch?v=B5NULPSiOGw)
 * [A CRDT Primer: Defanging Order Theory](https://www.youtube.com/watch?v=OOlnp2bZVRs)
 
-* [Loro Is Local-First State With CRDT](https://www.youtube.com/watch?v=NB7HRfyufLk)
 * [How Yjs works from the inside out](https://www.youtube.com/watch?v=0l5XgnQ6rB4)
+
+* https://learn.yjs.dev/
+* https://loro.dev/docs/advanced/event_graph_walker
+
+* https://github.com/yjs/yjs-demos
 
 * [CRDTs for Non Academics](https://www.youtube.com/watch?v=vBU70EjwGfw)
 * [An introduction to Conflict-Free Replicated Data Types (CRDTs)](https://www.youtube.com/watch?v=gZP2VUmH05A)

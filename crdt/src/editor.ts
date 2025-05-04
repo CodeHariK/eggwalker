@@ -1,7 +1,9 @@
 // This file implements a super simple text editor using textarea on top of the
 // CRDT implementation.
 
-import { CRDTDocument, getContent, HistoryLog } from "./crdt.js"
+import { CRDTDocument, Doc, getContent } from "./crdt.js"
+import { HistoryLog } from "./logs.js"
+import { createDocViewer } from "./render.js"
 
 type DiffResult = { pos: number, del: number, ins: string }
 
@@ -137,6 +139,23 @@ window.onload = () => {
     a.print()
     b.print()
   }
+
+  // const docs: Doc[] = [
+  //   {
+  //     content: [
+  //       { id: ['A', 1], content: 'A', originLeft: null, originRight: ['A', 2], deleted: false },
+  //       { id: ['A', 2], content: 'B', originLeft: ['A', 1], originRight: ['A', 3], deleted: false },
+  //       { id: ['A', 3], content: 'C', originLeft: ['B', 2], originRight: null, deleted: true },
+  //       { id: ['A', 4], content: 'D', originLeft: ['A', 2], originRight: null, deleted: false },
+  //     ],
+  //     version: { A: 3 }
+  //   },
+  // ];
+
+  // const container = document.getElementById('historyContainer')!;
+  // docs.forEach(doc => {
+  //   container.appendChild(createDocViewer(doc))
+  // });
 }
 
 
