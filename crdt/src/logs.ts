@@ -1,5 +1,7 @@
+import { getContent } from "./crdt"
 import { syntaxHighlight } from "./editor"
 import { createDocViewer } from "./render"
+import { Doc } from "./types"
 
 export const HISTORY_LOG_ELEMENTS: HTMLDivElement[] = []
 
@@ -9,10 +11,15 @@ export function HistoryLog(...data: any[]) {
 
     data.forEach((d) => {
         const block = document.createElement("div")
+        block.classList.add("doc-object")
 
         if (typeof d === 'object' && d !== null && d.type === "doc") {
-            let rdoc = createDocViewer(d.doc)
-            block.innerHTML = rdoc.innerHTML
+            let doc = d.doc as Doc
+            let rdoc = createDocViewer(doc)
+            block.innerHTML += `Agent: ${doc.agent}`
+            block.innerHTML += rdoc.innerHTML
+            block.innerHTML += `<pre>${syntaxHighlight(doc.version)}</pre>`
+            block.innerHTML += `Content: ${getContent(doc)}`
         }
         else if (typeof d === 'object' && d !== null) {
             block.className = "log-object"

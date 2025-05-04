@@ -1,30 +1,5 @@
-import { HISTORY_LOG_ELEMENTS, HistoryLog } from "./logs"
-
-export type Id = [agent: string, seq: number]
-
-export type Item = {
-  content: string, // 1 character
-
-  id: Id,
-  originLeft: Id | null,
-  originRight: Id | null,
-
-  deleted: boolean,
-}
-
-export type Version = Record<string, number>
-
-export type Doc = {
-  content: Item[],
-  version: Version,
-}
-
-function createDoc(): Doc {
-  return {
-    content: [],
-    version: {}
-  }
-}
+import { HistoryLog } from "./logs"
+import { cloneItem, cloneDoc, Doc, Id, Item, Version } from "./types"
 
 export function getContent(doc: Doc): string {
   let content = ''
@@ -66,11 +41,11 @@ const findItemAtPos = (doc: Doc, pos: number, stickEnd: boolean = false): number
   else throw Error('past end of the document')
 }
 
-function localInsertOne(doc: Doc, agent: string, pos: number, text: string) {
-  const seq = (doc.version[agent] ?? -1) + 1
+function localInsertOne(doc: Doc, pos: number, text: string) {
+  const seq = (doc.version[doc.agent] ?? -1) + 1
 
   HistoryLog({
-    "localInsertOne agent": agent,
+    "localInsertOne agent": doc.agent,
     "pos ": pos,
     "text ": text,
     "seq ": seq
@@ -80,17 +55,17 @@ function localInsertOne(doc: Doc, agent: string, pos: number, text: string) {
 
   integrate(doc, {
     content: text,
-    id: [agent, seq],
+    id: [doc.agent, seq],
     deleted: false,
     originLeft: doc.content[idx - 1]?.id ?? null,
     originRight: doc.content[idx]?.id ?? null,
   })
 }
 
-function localInsert(doc: Doc, agent: string, pos: number, text: string) {
+export function localInsert(doc: Doc, pos: number, text: string) {
   const content = [...text]
   for (const c of content) {
-    localInsertOne(doc, agent, pos, c)
+    localInsertOne(doc, pos, c)
     pos++
   }
 }
@@ -99,12 +74,16 @@ function remoteInsert(doc: Doc, item: Item) {
   integrate(doc, item)
 }
 
-function localDelete(doc: Doc, pos: number, delLen: number) {
+export function localDelete(doc: Doc, pos: number, delLen: number) {
   while (delLen > 0) {
     const idx = findItemAtPos(doc, pos, false)
     doc.content[idx].deleted = true
     delLen--
-    HistoryLog("-------- Deleted", idx)
+
+    HistoryLog(...[
+      `localDelete ${idx}`,
+      { type: "doc", "doc": cloneDoc(doc) }
+    ])
   }
 }
 
@@ -139,12 +118,12 @@ function integrate(doc: Doc, newItem: Item) {
     ? doc.content.length :
     findItemIdxById(doc, newItem.originRight)!
 
-  HistoryLog({ type: "doc", "doc": deepCloneDoc(doc) })
-
-  let IntegrateLog: any[] = [{
-    "integrate": { "originleft": left, "originright": right },
-    "newItem": newItem,
-  }]
+  let IntegrateLog: any[] = [
+    { type: "doc", "doc": cloneDoc(doc) },
+    {
+      "integrate": { "originleft": left, "originright": right },
+      "newItem": newItem,
+    }]
 
   let scanning = false
 
@@ -172,7 +151,7 @@ function integrate(doc: Doc, newItem: Item) {
   for (let i = destIdx; ; i++) {
     if (!scanning) {
       destIdx = i
-      IntegrateLog.push(`> scanning false ${destIdx}`)
+      IntegrateLog.push(`> scanning false , destIdx:${destIdx}`)
     }
 
     if (i === doc.content.length) {
@@ -243,11 +222,10 @@ function integrate(doc: Doc, newItem: Item) {
   // We've found the position. Insert here.
   doc.content.splice(destIdx, 0, cloneItem(newItem))
 
-  IntegrateLog.push(`> destIdx ${destIdx}`)
+  IntegrateLog.push(`>>>> destIdx:${destIdx}`)
+  IntegrateLog.push({ type: "doc", "doc": cloneDoc(doc) })
 
-  HistoryLog(IntegrateLog)
-
-  HistoryLog({ type: "doc", "doc": deepCloneDoc(doc) })
+  HistoryLog(...IntegrateLog)
 }
 
 function isInVersion(id: Id | null, version: Version): boolean {
@@ -257,7 +235,7 @@ function isInVersion(id: Id | null, version: Version): boolean {
   return highestSeq != null && highestSeq >= seq
 }
 
-function canInsertNow(item: Item, doc: Doc): boolean {
+export function canInsertNow(item: Item, doc: Doc): boolean {
   // We need op.id to not be in doc.versions
   // originLeft and originRight to be in.
   // We're also inserting each item from each agent in sequence, either seq == 0 or seq-1 to be in
@@ -268,9 +246,11 @@ function canInsertNow(item: Item, doc: Doc): boolean {
     && isInVersion(item.originRight, doc.version)
 }
 
-function mergeInto(dest: Doc, src: Doc) {
+export function mergeInto(dest: Doc, src: Doc) {
   const missing: (Item | null)[] = src.content.filter(item => !isInVersion(item.id, dest.version))
   let remaining = missing.length
+
+  let IntegrateLog = []
 
   while (remaining > 0) {
     // Find the next item in remaining and insert it.
@@ -304,69 +284,17 @@ function mergeInto(dest: Doc, src: Doc) {
 
     if (srcItem.deleted) {
       destItem.deleted = true
-      HistoryLog({ "MergeInto Delete": destItem })
+      IntegrateLog.push({ "MergeInto Delete": destItem })
     }
 
     srcIdx++
     destIdx++
   }
 
-}
+  IntegrateLog.push(...[
+    { type: "doc", "doc": cloneDoc(dest) },
+    { type: "doc", "doc": cloneDoc(src) }
+  ])
 
-
-export class CRDTDocument {
-  doc: Doc
-  agent: string
-
-  constructor(agent: string) {
-    this.doc = createDoc()
-    this.agent = agent
-  }
-
-  ins(pos: number, text: string): HTMLDivElement[] {
-    localInsert(this.doc, this.agent, pos, text)
-    return HISTORY_LOG_ELEMENTS
-  }
-
-  del(pos: number, delLen: number): HTMLDivElement[] {
-    localDelete(this.doc, pos, delLen)
-    return HISTORY_LOG_ELEMENTS
-  }
-
-  getString() {
-    return getContent(this.doc)
-  }
-
-  merge(other: CRDTDocument): HTMLDivElement[] {
-    mergeInto(this.doc, other.doc)
-    return HISTORY_LOG_ELEMENTS
-  }
-
-  reset() {
-    this.doc = createDoc()
-  }
-}
-
-export function deepCloneDoc(doc: Doc): any {
-  return {
-    string: getContent(doc),
-    content: doc.content.map(item => ({
-      content: item.content, // ✅ include this!
-      id: [...item.id],
-      originLeft: item.originLeft ? [...item.originLeft] : null,
-      originRight: item.originRight ? [...item.originRight] : null,
-      deleted: item.deleted,
-    })),
-    version: { ...doc.version },
-  }
-}
-
-function cloneItem(item: Item): Item {
-  return {
-    content: item.content,
-    id: [item.id[0], item.id[1]],
-    originLeft: item.originLeft ? [item.originLeft[0], item.originLeft[1]] : null,
-    originRight: item.originRight ? [item.originRight[0], item.originRight[1]] : null,
-    deleted: item.deleted,
-  }
+  HistoryLog(...IntegrateLog)
 }

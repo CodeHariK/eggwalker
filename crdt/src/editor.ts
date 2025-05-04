@@ -1,9 +1,8 @@
 // This file implements a super simple text editor using textarea on top of the
 // CRDT implementation.
 
-import { CRDTDocument, Doc, getContent } from "./crdt.js"
 import { HistoryLog } from "./logs.js"
-import { createDocViewer } from "./render.js"
+import { cloneDoc, CRDTDocument, itemReplacer } from "./types.js"
 
 type DiffResult = { pos: number, del: number, ins: string }
 
@@ -101,15 +100,16 @@ const attachEditor = (agentName: string, elemName: string) => {
     },
     mergeFrom(other: CRDTDocument, opname: string) {
 
-      HistoryLog({
-        "Merge": "",
-        "Dest": agentName + " (" + getContent(doc.doc) + ")",
-        "src": other.agent + " (" + getContent(other.doc) + ")",
-      })
+      HistoryLog(...[
+        `Merge Dest`,
+        { type: "doc", "doc": cloneDoc(doc.doc) },
+        `Src`,
+        { type: "doc", "doc": cloneDoc(other.doc) }
+      ])
 
       let history = doc.merge(other)
 
-      HistoryLog(`${agentName} merge ${other.agent} ${doc.getString()}`)
+      HistoryLog(`${agentName} merge ${other.doc.agent} ${doc.getString()}`)
 
       createHistoryTab(history, opname)
 
@@ -139,28 +139,10 @@ window.onload = () => {
     a.print()
     b.print()
   }
-
-  // const docs: Doc[] = [
-  //   {
-  //     content: [
-  //       { id: ['A', 1], content: 'A', originLeft: null, originRight: ['A', 2], deleted: false },
-  //       { id: ['A', 2], content: 'B', originLeft: ['A', 1], originRight: ['A', 3], deleted: false },
-  //       { id: ['A', 3], content: 'C', originLeft: ['B', 2], originRight: null, deleted: true },
-  //       { id: ['A', 4], content: 'D', originLeft: ['A', 2], originRight: null, deleted: false },
-  //     ],
-  //     version: { A: 3 }
-  //   },
-  // ];
-
-  // const container = document.getElementById('historyContainer')!;
-  // docs.forEach(doc => {
-  //   container.appendChild(createDocViewer(doc))
-  // });
 }
 
 
 let tabCount = 0
-let activeTabId = null
 const historyTabs = document.getElementById("historyTabs")!
 const historyContent = document.getElementById("historyContent")!
 
@@ -181,7 +163,6 @@ function createHistoryTab(historyElements: HTMLElement[], opname: string) {
 }
 
 function switchTab(tabId: string) {
-  activeTabId = tabId
   document.querySelectorAll("#historyTabs .tab").forEach(tab => {
     const htmlTab = tab as HTMLElement
     htmlTab.classList.toggle("active", htmlTab.dataset.id === tabId)
@@ -193,7 +174,7 @@ function switchTab(tabId: string) {
 }
 
 export function syntaxHighlight(obj: any) {
-  const json = JSON.stringify(obj, null, 2)
+  const json = JSON.stringify(obj, itemReplacer, 2)
   return json.replace(/("(\\u[\da-fA-F]{4}|\\[^u]|[^\\"])*"|\b\d+\.?\d*|\btrue\b|\bfalse\b|\bnull\b)/g, match => {
     let cls = 'number'
     if (/^"/.test(match)) {

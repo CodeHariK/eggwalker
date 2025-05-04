@@ -1,7 +1,12 @@
 import { dia, shapes } from '@joint/core';
-import { Doc, Id } from "./crdt";
+import { Doc, Id } from './types';
 
-export function createDocViewer(doc: Doc,): HTMLDivElement {
+const docColorMap = new Map<string, string>
+
+export function createDocViewer(doc: Doc): HTMLDivElement {
+
+    generateVersionColorMap(doc, docColorMap);
+
     // Create container for this paper
     const paperWrapper = document.createElement('div');
 
@@ -15,7 +20,7 @@ export function createDocViewer(doc: Doc,): HTMLDivElement {
     // Create graph and paper
     const graph = new dia.Graph();
 
-    const paper = new dia.Paper({
+    new dia.Paper({
         el: paperElement,
         model: graph,
         width: 5000,
@@ -36,11 +41,11 @@ export function createDocViewer(doc: Doc,): HTMLDivElement {
         rect.resize(40, 40);
         rect.attr({
             body: {
-                fill: item.deleted ? '#f88' : '#fff',
+                fill: item.deleted ? '#f88' : docColorMap.get(item.id[0]),
                 stroke: '#000',
             },
             label: {
-                text: `${item.content}\n${idStr}`,
+                text: `${item.content}\n${idStr}\n${index}`,
                 fontSize: 12,
                 fill: '#000',
             },
@@ -58,7 +63,7 @@ export function createDocViewer(doc: Doc,): HTMLDivElement {
         const getIdStr = (id: Id | null) => id ? `${id[0]}:${id[1]}` : null;
 
         let rpx = Math.random() * 20 - 10
-        let rcol = getRandomColorHex()
+        let rcol = generateLightHSL()
 
         const originLeftStr = getIdStr(item.originLeft);
         if (originLeftStr && idMap.has(originLeftStr)) {
@@ -68,27 +73,21 @@ export function createDocViewer(doc: Doc,): HTMLDivElement {
             const targetCenter = current.getBBox().center();
 
             const link = new shapes.standard.Link();
-            link.source({ x: sourceCenter.x + rpx, y: sourceCenter.y + 20 });
-            link.target({ x: targetCenter.x + rpx, y: targetCenter.y + 20 });
+            link.source({ x: targetCenter.x + rpx, y: targetCenter.y + 20 });
+            link.target({ x: sourceCenter.x + rpx, y: sourceCenter.y + 20 });
             link.connector('rounded');
 
             // Control points below both boxes
             link.set('vertices', [
-                { x: sourceCenter.x + 10 + rpx, y: sourceCenter.y + 40 + rpx },
                 { x: targetCenter.x - 10 + rpx, y: targetCenter.y + 40 + rpx },
+                { x: sourceCenter.x + 10 + rpx, y: sourceCenter.y + 40 + rpx },
             ]);
 
             link.attr({
                 line: {
                     stroke: rcol,
                     strokeWidth: 1,
-                    // strokeDasharray: '5 5', // dotted line
-                    sourceMarker: {
-                        d: '', // remove default arrow
-                    },
-                    targetMarker: {
-                        d: '', // remove default arrow
-                    },
+                    strokeDasharray: '5 5', // dotted line
                 },
             });
 
@@ -117,13 +116,6 @@ export function createDocViewer(doc: Doc,): HTMLDivElement {
                 line: {
                     stroke: rcol, // or '#0074D9' for left
                     strokeWidth: 1,
-                    // strokeDasharray: '5 5', // dotted line
-                    sourceMarker: {
-                        d: '', // remove default arrow
-                    },
-                    targetMarker: {
-                        d: '', // remove default arrow
-                    },
                 },
             });
 
@@ -134,6 +126,26 @@ export function createDocViewer(doc: Doc,): HTMLDivElement {
     return paperWrapper
 }
 
-function getRandomColorHex() {
-    return '#' + Math.floor(Math.random() * 16777215).toString(16);
+function generateLightHSL() {
+    const hue = Math.floor(Math.random() * 360); // Hue ranges from 0 to 360
+    const saturation = Math.floor(Math.random() * 30) + 70; // Saturation between 80 and 100 to ensure light color
+    const lightness = Math.floor(Math.random() * 30) + 70; // Lightness between 80 and 100 to ensure light color
+
+    return `hsl(${hue}, ${saturation}%, ${lightness}%)`;
+}
+
+function generateVersionColorMap(
+    doc: Doc,
+    existingMap?: Map<string, string>
+): Map<string, string> {
+    const colorMap = existingMap ?? new Map<string, string>();
+
+    for (const key of Object.keys(doc.version)) {
+        if (!colorMap.has(key)) {
+            const color = generateLightHSL();
+            colorMap.set(key, color);
+        }
+    }
+
+    return colorMap;
 }

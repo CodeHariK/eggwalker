@@ -82,6 +82,8 @@ body {
   border-bottom: 1px solid #333;
   padding: 2px;
   overflow-x: auto;
+  flex-shrink: 0;
+  user-select: none;
 }
 
 #historyTabs div {
@@ -121,6 +123,18 @@ body {
   border-left: 4px solid #555;
 }
 
+.doc-paper {
+  background: #92929233;
+}
+
+.doc-object {
+  overflow-x: auto;
+  padding: 10px;
+  margin: 4px;
+  border-radius: 10px;
+  background: #a3a3a333;
+}
+
 .log-object pre {
   margin: 0;
   font-family: monospace;
@@ -149,4 +163,22 @@ body {
 
 .json-null {
   color: #dcdcaa;
+}
+
+/* WebKit browsers (Chrome, Safari, Edge) */
+::-webkit-scrollbar,
+::-webkit-scrollbar {
+  height: 6px;
+  width: 8px;
+}
+
+::-webkit-scrollbar-thumb,
+::-webkit-scrollbar-thumb {
+  background-color: #868686;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-track,
+::-webkit-scrollbar-track {
+  background-color: #2a2a2a;
 }
