@@ -15,7 +15,14 @@ export function HistoryLog(...data: any[]) {
 
         if (typeof d === 'object' && d !== null && d.type === "doc") {
             let doc = d.doc as Doc
-            let rdoc = createDocViewer(doc)
+            let rdoc
+            if (d.ins) {
+                rdoc = createDocViewer(doc, d.highlight, d.ins)
+            } else {
+                rdoc = createDocViewer(doc, d.highlight, null)
+            }
+            if (d.op == "del") block.style.border = "4px dashed red"
+            if (d.op == "ins") block.style.border = "4px dashed green"
             block.innerHTML += `Agent: ${doc.agent}`
             block.innerHTML += rdoc.innerHTML
             block.innerHTML += `<pre>${syntaxHighlight(doc.version)}</pre>`

@@ -82,7 +82,7 @@ export function localDelete(doc: Doc, pos: number, delLen: number) {
 
     HistoryLog(...[
       `localDelete ${idx}`,
-      { type: "doc", "doc": cloneDoc(doc) }
+      { type: "doc", "op": "del", "doc": cloneDoc(doc) }
     ])
   }
 }
@@ -118,12 +118,7 @@ function integrate(doc: Doc, newItem: Item) {
     ? doc.content.length :
     findItemIdxById(doc, newItem.originRight)!
 
-  let IntegrateLog: any[] = [
-    { type: "doc", "doc": cloneDoc(doc) },
-    {
-      "integrate": { "originleft": left, "originright": right },
-      "newItem": newItem,
-    }]
+  let IntegrateLog: any[] = []
 
   let scanning = false
 
@@ -155,12 +150,12 @@ function integrate(doc: Doc, newItem: Item) {
     }
 
     if (i === doc.content.length) {
-      IntegrateLog.push("> If we reach the end of the document, just insert")
+      IntegrateLog.push("> If we reach the end of the document, just insert (i === doc.content.length)")
       break
     }
 
     if (i === right) {
-      IntegrateLog.push(`> i:${i} right:${right} No ambiguity / concurrency. Insert here`)
+      IntegrateLog.push(`> i:${i} right:${right} No ambiguity / concurrency. Insert here (i === right)`)
       break
     }
 
@@ -170,12 +165,24 @@ function integrate(doc: Doc, newItem: Item) {
       ? doc.content.length
       : findItemIdxById(doc, other.originRight)!
 
-    IntegrateLog.push({
-      "other": other,
-      "index": i,
-      "oleft": oleft,
-      "oright": oright
-    })
+    IntegrateLog.push(...[
+      // {
+      //   "index": i,
+      //   "oleft": oleft,
+      //   "oright": oright,
+      //   "other": other
+      // },
+      {
+        type: "doc",
+        "doc": cloneDoc(doc),
+        "ins": {
+          "originleft": left,
+          "originright": right,
+          "destIdx": destIdx,
+          "newItem": newItem,
+        },
+      },
+    ])
 
     // The logic below summarizes to:
     // if (oleft < left || (oleft === left && oright === right && newItem.id[0] < other.id[0])) break
@@ -183,37 +190,34 @@ function integrate(doc: Doc, newItem: Item) {
 
     // This is the same code as the above 2 lines, but written out the long way:
     if (oleft < left) {
-
-      IntegrateLog.push(`> destIdx:${destIdx} oleft < left break`)
-
-      // Top row. Insert, insert, arbitrary (insert)
+      IntegrateLog.push(`> Top row Insert, insert, arbitrary (insert) destIdx:${destIdx} oleft < left break`)
       break
     } else if (oleft === left) {
       // Middle row.
       if (oright < right) {
         // This is tricky. We're looking at an item we *might* insert after - but we can't tell yet!
         scanning = true
-        IntegrateLog.push(`> destIdx:${destIdx} oleft === left oright < right scanning true continue`)
+        IntegrateLog.push(`> Center Left, destIdx:${destIdx} oleft === left oright < right, scanning true, continue`)
         continue
       } else if (oright === right) {
         // Raw conflict. Order based on user agents.
         if (newItem.id[0] < other.id[0]) {
-          IntegrateLog.push(`> destIdx:${destIdx} oleft == left oright == right newItem.id[0] < other.id[0] break`)
+          IntegrateLog.push(`> Center, destIdx:${destIdx} oleft == left oright == right, compare agents : ${newItem.id[0]} < ${other.id[0]} == true;  break`)
           break
         }
         else {
           scanning = false
-          IntegrateLog.push(`> destIdx:${destIdx} oleft == left oright == right scanning false continue`)
+          IntegrateLog.push(`> Center, destIdx:${destIdx} oleft == left oright == right, compare agents : ${newItem.id[0]} < ${other.id[0]} == false; scanning false continue`)
           continue
         }
       } else { // oright > right
         scanning = false
-        IntegrateLog.push(`> destIdx:${destIdx} oleft == left oright == right scanning false continue`)
+        IntegrateLog.push(`> Center right, destIdx:${destIdx} oleft == left oright > right, scanning false, continue`)
         continue
       }
     } else { // oleft > left
       // Bottom row. Arbitrary (skip), skip, skip
-      IntegrateLog.push(`> destIdx:${destIdx} oleft > left continue`)
+      IntegrateLog.push(`> Bottom row skip, destIdx:${destIdx}, oleft > left continue`)
 
       continue
     }
@@ -222,8 +226,12 @@ function integrate(doc: Doc, newItem: Item) {
   // We've found the position. Insert here.
   doc.content.splice(destIdx, 0, cloneItem(newItem))
 
-  IntegrateLog.push(`>>>> destIdx:${destIdx}`)
-  IntegrateLog.push({ type: "doc", "doc": cloneDoc(doc) })
+  IntegrateLog.push({
+    type: "doc",
+    "op": "ins",
+    "highlight": destIdx,
+    "doc": cloneDoc(doc)
+  })
 
   HistoryLog(...IntegrateLog)
 }
@@ -283,18 +291,31 @@ export function mergeInto(dest: Doc, src: Doc) {
     }
 
     if (srcItem.deleted) {
+      let deleted = destItem.deleted
       destItem.deleted = true
-      IntegrateLog.push({ "MergeInto Delete": destItem })
+      if (!deleted) {
+        IntegrateLog.push({ "MergeInto Delete": destItem })
+      }
     }
 
     srcIdx++
     destIdx++
   }
 
-  IntegrateLog.push(...[
-    { type: "doc", "doc": cloneDoc(dest) },
-    { type: "doc", "doc": cloneDoc(src) }
-  ])
+  // IntegrateLog.push(...[
+  //   { type: "doc", "doc": cloneDoc(dest) },
+  //   { type: "doc", "doc": cloneDoc(src) }
+  // ])
 
   HistoryLog(...IntegrateLog)
 }
+
+// @1 : HYPER
+// @2 : labs
+// Merge LEFT RIGHT
+// HYPERlabs
+
+// @1 : HYPER OMEGA labs
+// @2 : adv HYPER gen
+// Merge LEFT RIGHT
+// adv HYPER OMEGA gen

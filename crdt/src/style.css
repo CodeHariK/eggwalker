@@ -182,3 +182,10 @@ body {
 ::-webkit-scrollbar-track {
   background-color: #2a2a2a;
 }
+
+td,
+li {
+  border: 1px solid red;
+  padding: 5px;
+  font-size: 14px;
+}

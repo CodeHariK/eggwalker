@@ -19,6 +19,79 @@
       <button id="reset" onClick="reset()">Reset everything</button>
       <button id="print" onClick="print()">print</button>
 
+      <table>
+        <tr>
+          <td>
+          </td>
+          <td>
+            oright &lt;
+          </td>
+          <td>
+            oright =
+          </td>
+          <td>
+            oright &gt;
+          </td>
+        </tr>
+        <tr>
+          <td>
+            oleft &lt;
+          </td>
+          <td>
+            Insert
+          </td>
+          <td>
+            Insert
+          </td>
+          <td>
+            Insert
+          </td>
+        </tr>
+        <tr>
+          <td>
+            oleft =
+          </td>
+          <td>
+            Scan
+          </td>
+          <td>
+            id
+          </td>
+          <td>
+            Skip
+          </td>
+        </tr>
+        <tr>
+          <td>
+            oleft &gt;
+          </td>
+          <td>
+            Skip
+          </td>
+          <td>
+            Skip
+          </td>
+          <td>
+            Skip
+          </td>
+        </tr>
+      </table>
+
+      <ul>
+        <li>
+          Insert immediately if other has an earlier originLeft.
+        </li>
+        <li>
+          Scan (ambiguous) when origins are equal but destination is earlier, could be an insertion race
+        </li>
+        <li>
+          Compare by ID when origins are identical deterministic ordering
+        </li>
+        <li>
+          Skip when the other item comes from a later insertion.
+        </li>
+      </ul>
+
     </div>
 
     <div id="historyContainer">
