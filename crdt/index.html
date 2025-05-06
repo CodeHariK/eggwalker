@@ -21,61 +21,42 @@
 
       <table>
         <tr>
-          <td>
-          </td>
-          <td>
-            oright &lt;
-          </td>
-          <td>
-            oright =
-          </td>
-          <td>
-            oright &gt;
-          </td>
+          <td></td>
+          <td>oright &lt;</td>
+          <td>oright =</td>
+          <td>oright &gt;</td>
         </tr>
         <tr>
-          <td>
-            oleft &lt;
-          </td>
-          <td>
-            Insert
-          </td>
-          <td>
-            Insert
-          </td>
-          <td>
-            Insert
-          </td>
+          <td>oleft &lt;</td>
+          <td>break</td>
+          <td>break</td>
+          <td>break</td>
         </tr>
         <tr>
-          <td>
-            oleft =
-          </td>
-          <td>
-            Scan
-          </td>
-          <td>
-            id
-          </td>
-          <td>
-            Skip
-          </td>
+          <td>oleft =</td>
+          <td>scan=true; continue</td>
+          <td>compare ID ? break : scan=false; continue</td>
+          <td>scan=false; continue</td>
         </tr>
         <tr>
-          <td>
-            oleft &gt;
-          </td>
-          <td>
-            Skip
-          </td>
-          <td>
-            Skip
-          </td>
-          <td>
-            Skip
-          </td>
+          <td>oleft &gt;</td>
+          <td>continue</td>
+          <td>continue</td>
+          <td>continue</td>
         </tr>
       </table>
+
+      <pre>
+let destIdx=left+1
+for(i=destIdx;;i++){
+  if(!scanning) {destIdx = i}
+  if (i == doc.length || i == right) {break}
+  let other = doc.content[i]
+  if (oleft &lt; left ||
+    (oleft==left && oright==right && compareId)) 
+    { break }
+  if (oleft === left) { scanning = oright &lt; right }
+}</pre>
 
       <ul>
         <li>

@@ -5,36 +5,32 @@ import { Doc } from "./types"
 
 export const HISTORY_LOG_ELEMENTS: HTMLDivElement[] = []
 
-export function HistoryLog(...data: any[]) {
+export function HistoryLog(...logs: any[]) {
     const container = document.createElement("div")
     container.className = "history-entry"
 
-    data.forEach((d) => {
-        const block = document.createElement("div")
-        block.classList.add("doc-object")
+    const block = document.createElement("div")
+    block.classList.add("doc-object")
 
-        if (typeof d === 'object' && d !== null && d.type === "doc") {
-            let doc = d.doc as Doc
-            let rdoc
-            if (d.ins) {
-                rdoc = createDocViewer(doc, d.highlight, d.ins)
-            } else {
-                rdoc = createDocViewer(doc, d.highlight, null)
-            }
-            if (d.op == "del") block.style.border = "4px dashed red"
-            if (d.op == "ins") block.style.border = "4px dashed green"
+    logs.forEach((log) => {
+
+        if (typeof log === 'object' && log !== null && (log.type === "insdoc" || log.type === "deldoc")) {
+            let doc = log.doc as Doc
+            if (log.type == "deldoc") block.style.border = "4px dashed red"
+            if (log.type == "insdoc") block.style.border = "4px dashed green"
+
             block.innerHTML += `Agent: ${doc.agent}`
-            block.innerHTML += rdoc.innerHTML
+            if (doc) {
+                block.innerHTML += createDocViewer(log).innerHTML
+            }
             block.innerHTML += `<pre>${syntaxHighlight(doc.version)}</pre>`
             block.innerHTML += `Content: ${getContent(doc)}`
         }
-        else if (typeof d === 'object' && d !== null) {
-            block.className = "log-object"
-            block.innerHTML = `<pre>${syntaxHighlight(d)}</pre>`
+        else if (typeof log === 'object' && log !== null) {
+            block.innerHTML += `<pre>${syntaxHighlight(log)}</pre>`
         }
         else {
-            block.className = "log-text"
-            block.textContent = String(d)
+            block.innerHTML += `<p>${String(log)}</p>`
         }
 
         container.appendChild(block)

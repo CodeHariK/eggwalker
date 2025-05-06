@@ -3,14 +3,19 @@ import { cloneDoc, Doc, Id, Item } from './types';
 
 const docColorMap = new Map<string, string>
 
-export function createDocViewer(oridoc: Doc, highlight: number | null, ins: null | {
+type Log = {
+    type: "insdoc" | "deldoc",
+    "doc": Doc,
     "originleft": number,
     "originright": number,
     "destIdx": number,
     "newItem": Item,
-}): HTMLDivElement {
+    highlight: number
+};
 
-    const doc: Doc = cloneDoc(oridoc)
+export function createDocViewer(log: Log): HTMLDivElement {
+
+    const doc: Doc = cloneDoc(log.doc)
 
     doc.content.splice(0, 0, {
         content: "start",
@@ -54,18 +59,18 @@ export function createDocViewer(oridoc: Doc, highlight: number | null, ins: null
     const idMap = new Map<string, dia.Element>();
 
     doc.content.forEach((item, index) => {
-        const { idStr, rect } = drawItem(item, index, highlight != null ? index == (highlight + 1) : false, 50, 0, 100, graph);
+        const { idStr, rect } = drawItem(item, index, log?.highlight != null ? index == (log.highlight + 1) : false, 50, 0, 100, graph);
         idMap.set(idStr, rect);
     });
 
     doc.content.forEach((item, index) => {
         const idStr = `${item.id[0]}:${item.id[1]}`;
-        drawLink(item, idMap.get(idStr), idMap, doc, graph, ins ? ((ins.destIdx + 1) == index) : false)
+        drawLink(item, idMap.get(idStr), idMap, doc, graph, log?.destIdx ? ((log.destIdx + 1) == index) : false)
     });
 
-    if (ins) {
-        let item = drawItem(ins.newItem, ins.destIdx, true, 50, 25, 20, graph)
-        drawLink(ins.newItem, item.rect, idMap, doc, graph, true)
+    if (log?.newItem && log?.destIdx) {
+        let item = drawItem(log.newItem, log.destIdx, true, 50, 25, 20, graph)
+        drawLink(log.newItem, item.rect, idMap, doc, graph, true)
     }
 
     return paperWrapper
@@ -74,7 +79,7 @@ export function createDocViewer(oridoc: Doc, highlight: number | null, ins: null
 function drawItem(
     item: Item,
     index: number,
-    hightlight: boolean,
+    highlight: boolean,
     spacing: number,
     x: number,
     y: number,
@@ -85,10 +90,11 @@ function drawItem(
     rect.resize(40, 40);
     rect.attr({
         body: {
-            fill: hightlight ? "#0f0" : ((item.deleted || item.id[0] == "#")
+            fill: ((item.deleted || item.id[0] == "#")
                 ? '#f88'
                 : docColorMap.get(item.id[0])),
-            stroke: '#000',
+            stroke: highlight ? "#0f0" : '#000',
+            strokeWidth: highlight ? 4 : 1,
         },
         label: {
             text: item.id[0] == "#" ? `${index - 1}` : `${item.content}\n${idStr}\n${index - 1}`,
@@ -116,8 +122,8 @@ function drawLink(
 
     let idMapHasItem = idMap.has(getIdStr(item.id))
 
-    rtx = (rtx + 5) % 30
-    let rpx = idMapHasItem ? rtx / 2 : 0
+    rtx = (rtx + 7) % 35
+    let rpx = idMapHasItem ? rtx - 17 : 0
     let rpy = idMapHasItem ? rtx : 0
     let rcol = generateLightHSL()
 
@@ -184,8 +190,10 @@ function drawLink(
     }
 }
 
+let HSLcolor = 0
 function generateLightHSL() {
-    const hue = 30 + Math.floor(Math.random() * 300); // Hue ranges from 0 to 360
+    HSLcolor += 40
+    const hue = (HSLcolor % 160) + 20 + Math.floor(Math.random() * 140); // Hue ranges from 0 to 360
     const saturation = Math.floor(Math.random() * 30) + 70; // Saturation between 80 and 100 to ensure light color
     const lightness = Math.floor(Math.random() * 30) + 70; // Lightness between 80 and 100 to ensure light color
 

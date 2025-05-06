@@ -135,16 +135,6 @@ body {
   background: #a3a3a333;
 }
 
-.log-object pre {
-  margin: 0;
-  font-family: monospace;
-}
-
-.log-text {
-  color: #ccc;
-  font-family: monospace;
-}
-
 .json-key {
   color: #9cdcfe;
 }

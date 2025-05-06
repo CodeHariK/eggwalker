@@ -82,7 +82,11 @@ export function localDelete(doc: Doc, pos: number, delLen: number) {
 
     HistoryLog(...[
       `localDelete ${idx}`,
-      { type: "doc", "op": "del", "doc": cloneDoc(doc) }
+      {
+        type: "deldoc",
+        "doc": cloneDoc(doc),
+        "highlight": idx,
+      }
     ])
   }
 }
@@ -146,16 +150,15 @@ function integrate(doc: Doc, newItem: Item) {
   for (let i = destIdx; ; i++) {
     if (!scanning) {
       destIdx = i
-      IntegrateLog.push(`> scanning false , destIdx:${destIdx}`)
+      IntegrateLog.push(`> scanning:${scanning} , destIdx:${destIdx}`)
     }
 
     if (i === doc.content.length) {
-      IntegrateLog.push("> If we reach the end of the document, just insert (i === doc.content.length)")
+      IntegrateLog.push("> If we reach the end of the document, just insert (i == doc.content.length)")
       break
     }
-
     if (i === right) {
-      IntegrateLog.push(`> i:${i} right:${right} No ambiguity / concurrency. Insert here (i === right)`)
+      IntegrateLog.push(`> i:${i} right:${right} No ambiguity / concurrency. Insert here (i == right)`)
       break
     }
 
@@ -173,14 +176,12 @@ function integrate(doc: Doc, newItem: Item) {
       //   "other": other
       // },
       {
-        type: "doc",
+        type: "insdoc",
         "doc": cloneDoc(doc),
-        "ins": {
-          "originleft": left,
-          "originright": right,
-          "destIdx": destIdx,
-          "newItem": newItem,
-        },
+        "originleft": left,
+        "originright": right,
+        "destIdx": destIdx,
+        "newItem": newItem,
       },
     ])
 
@@ -190,34 +191,33 @@ function integrate(doc: Doc, newItem: Item) {
 
     // This is the same code as the above 2 lines, but written out the long way:
     if (oleft < left) {
-      IntegrateLog.push(`> Top row Insert, insert, arbitrary (insert) destIdx:${destIdx} oleft < left break`)
+      IntegrateLog.push(`> Insert destIdx:${destIdx} oleft < left break`)
       break
     } else if (oleft === left) {
       // Middle row.
       if (oright < right) {
-        // This is tricky. We're looking at an item we *might* insert after - but we can't tell yet!
         scanning = true
-        IntegrateLog.push(`> Center Left, destIdx:${destIdx} oleft === left oright < right, scanning true, continue`)
+        IntegrateLog.push(`> This is tricky. We're looking at an item we *might* insert after - but we can't tell yet!
+          destIdx:${destIdx} oleft === left oright < right, scanning true, continue`)
         continue
       } else if (oright === right) {
         // Raw conflict. Order based on user agents.
         if (newItem.id[0] < other.id[0]) {
-          IntegrateLog.push(`> Center, destIdx:${destIdx} oleft == left oright == right, compare agents : ${newItem.id[0]} < ${other.id[0]} == true;  break`)
+          IntegrateLog.push(`> destIdx:${destIdx} oleft == left oright == right, compare agents : ${newItem.id[0]} < ${other.id[0]} == true;  break`)
           break
         }
         else {
           scanning = false
-          IntegrateLog.push(`> Center, destIdx:${destIdx} oleft == left oright == right, compare agents : ${newItem.id[0]} < ${other.id[0]} == false; scanning false continue`)
+          IntegrateLog.push(`> destIdx:${destIdx} oleft == left oright == right, compare agents : ${newItem.id[0]} < ${other.id[0]} == false; scanning:${scanning} continue`)
           continue
         }
       } else { // oright > right
         scanning = false
-        IntegrateLog.push(`> Center right, destIdx:${destIdx} oleft == left oright > right, scanning false, continue`)
+        IntegrateLog.push(`> Center right, destIdx:${destIdx} oleft == left oright > right, scanning:${scanning}, continue`)
         continue
       }
     } else { // oleft > left
-      // Bottom row. Arbitrary (skip), skip, skip
-      IntegrateLog.push(`> Bottom row skip, destIdx:${destIdx}, oleft > left continue`)
+      IntegrateLog.push(`> Skip, destIdx:${destIdx}, oleft > left; continue`)
 
       continue
     }
@@ -227,10 +227,9 @@ function integrate(doc: Doc, newItem: Item) {
   doc.content.splice(destIdx, 0, cloneItem(newItem))
 
   IntegrateLog.push({
-    type: "doc",
-    "op": "ins",
+    type: "insdoc",
+    "doc": cloneDoc(doc),
     "highlight": destIdx,
-    "doc": cloneDoc(doc)
   })
 
   HistoryLog(...IntegrateLog)
@@ -295,6 +294,11 @@ export function mergeInto(dest: Doc, src: Doc) {
       destItem.deleted = true
       if (!deleted) {
         IntegrateLog.push({ "MergeInto Delete": destItem })
+        IntegrateLog.push({
+          type: "deldoc",
+          "doc": cloneDoc(dest),
+          "highlight": destIdx,
+        })
       }
     }
 
@@ -307,7 +311,9 @@ export function mergeInto(dest: Doc, src: Doc) {
   //   { type: "doc", "doc": cloneDoc(src) }
   // ])
 
-  HistoryLog(...IntegrateLog)
+  if (IntegrateLog.length > 0) {
+    HistoryLog(...IntegrateLog)
+  }
 }
 
 // @1 : HYPER

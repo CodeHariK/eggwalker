@@ -60,8 +60,6 @@ const attachEditor = (agentName: string, elemName: string) => {
         if (newValue !== lastValue) {
           let { pos, del, ins } = calcDiff(lastValue, newValue)
 
-          HistoryLog(`state ${agentName} ${lastValue}`)
-
           let history: HTMLDivElement[] = []
 
           if (del > 0) {
@@ -75,8 +73,6 @@ const attachEditor = (agentName: string, elemName: string) => {
 
           // last_version = doc.getLocalVersion()
           lastValue = newValue
-
-          HistoryLog(`state ${agentName} ${lastValue}`)
 
           if (del > 0) {
             createHistoryTab(history, "del")
@@ -102,14 +98,12 @@ const attachEditor = (agentName: string, elemName: string) => {
 
       HistoryLog(...[
         `Merge Dest`,
-        { type: "doc", "doc": cloneDoc(doc.doc) },
+        { type: "insdoc", "doc": cloneDoc(doc.doc) },
         `Src`,
-        { type: "doc", "doc": cloneDoc(other.doc) }
+        { type: "insdoc", "doc": cloneDoc(other.doc) }
       ])
 
       let history = doc.merge(other)
-
-      HistoryLog(`${agentName} merge ${other.doc.agent} ${doc.getString()}`)
 
       createHistoryTab(history, opname)
 
