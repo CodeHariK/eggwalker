@@ -113,7 +113,6 @@ function mergeInto<T>(dest: OpLog<T>, src: OpLog<T>) {
     }
 }
 
-
 /// Generate a document from oplog
 
 function expandVersionToSet(oplog: OpLog<any>, frontier: LV[]): Set<LV> {

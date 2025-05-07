@@ -44,13 +44,6 @@ const findItemAtPos = (doc: Doc, pos: number, stickEnd: boolean = false): number
 function localInsertOne(doc: Doc, pos: number, text: string) {
   const seq = (doc.version[doc.agent] ?? -1) + 1
 
-  HistoryLog({
-    "localInsertOne agent": doc.agent,
-    "pos ": pos,
-    "text ": text,
-    "seq ": seq
-  })
-
   const idx = findItemAtPos(doc, pos, true)
 
   integrate(doc, {
@@ -293,7 +286,6 @@ export function mergeInto(dest: Doc, src: Doc) {
       let deleted = destItem.deleted
       destItem.deleted = true
       if (!deleted) {
-        IntegrateLog.push({ "MergeInto Delete": destItem })
         IntegrateLog.push({
           type: "deldoc",
           "doc": cloneDoc(dest),

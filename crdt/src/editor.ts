@@ -75,9 +75,9 @@ const attachEditor = (agentName: string, elemName: string) => {
           lastValue = newValue
 
           if (del > 0) {
-            createHistoryTab(history, "del")
+            createHistoryTab(history, "del" + agentName)
           } else {
-            createHistoryTab(history, "ins")
+            createHistoryTab(history, "ins" + agentName)
           }
           history.length = 0
         }
@@ -94,7 +94,7 @@ const attachEditor = (agentName: string, elemName: string) => {
     print() {
       console.log(doc)
     },
-    mergeFrom(other: CRDTDocument, opname: string) {
+    merge(other: CRDTDocument, opname: string) {
 
       HistoryLog(...[
         `Merge Dest`,
@@ -115,23 +115,35 @@ const attachEditor = (agentName: string, elemName: string) => {
 }
 
 window.onload = () => {
-  const a = attachEditor('@1', 'text1')
-  const b = attachEditor('@2', 'text2')
+  const one = attachEditor('@1', 'one')
+  const two = attachEditor('@2', 'two')
+  const three = attachEditor('@3', 'three')
 
   elemById('reset').onclick = () => {
-    a.reset()
-    b.reset()
+    one.reset()
+    two.reset()
+    three.reset()
   }
 
-  elemById('pushLeft').onclick = () => {
-    a.mergeFrom(b.doc, "pushLeft")
+  elemById('OneMergeTwo').onclick = () => {
+    one.merge(two.doc, 'OneMergeTwo')
   }
-  elemById('pushRight').onclick = () => {
-    b.mergeFrom(a.doc, "pushRight")
+  elemById('TwoMergeOne').onclick = () => {
+    two.merge(one.doc, 'TwoMergeOne')
   }
-  elemById('print').onclick = () => {
-    a.print()
-    b.print()
+
+  elemById('OneMergeThree').onclick = () => {
+    one.merge(three.doc, 'OneMergeThree')
+  }
+  elemById('ThreeMergeOne').onclick = () => {
+    three.merge(one.doc, 'ThreeMergeOne')
+  }
+
+  elemById('TwoMergeThree').onclick = () => {
+    two.merge(three.doc, 'TwoMergeThree')
+  }
+  elemById('ThreeMergeTwo').onclick = () => {
+    three.merge(two.doc, 'ThreeMergeTwo')
   }
 }
 

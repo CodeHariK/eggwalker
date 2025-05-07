@@ -5,11 +5,11 @@ const docColorMap = new Map<string, string>
 
 type Log = {
     type: "insdoc" | "deldoc",
-    "doc": Doc,
-    "originleft": number,
-    "originright": number,
-    "destIdx": number,
-    "newItem": Item,
+    doc: Doc,
+    originleft: number,
+    originright: number,
+    destIdx: number,
+    newItem: Item,
     highlight: number
 };
 
@@ -65,10 +65,10 @@ export function createDocViewer(log: Log): HTMLDivElement {
 
     doc.content.forEach((item, index) => {
         const idStr = `${item.id[0]}:${item.id[1]}`;
-        drawLink(item, idMap.get(idStr), idMap, doc, graph, log?.destIdx ? ((log.destIdx + 1) == index) : false)
+        drawLink(item, idMap.get(idStr), idMap, doc, graph, log?.destIdx != null ? ((log.destIdx + 1) == index) : false)
     });
 
-    if (log?.newItem && log?.destIdx) {
+    if (log?.newItem && log?.destIdx != null) {
         let item = drawItem(log.newItem, log.destIdx, true, 50, 25, 20, graph)
         drawLink(log.newItem, item.rect, idMap, doc, graph, true)
     }
@@ -93,7 +93,7 @@ function drawItem(
             fill: ((item.deleted || item.id[0] == "#")
                 ? '#f88'
                 : docColorMap.get(item.id[0])),
-            stroke: highlight ? "#0f0" : '#000',
+            stroke: highlight ? "#f00" : '#000',
             strokeWidth: highlight ? 4 : 1,
         },
         label: {
