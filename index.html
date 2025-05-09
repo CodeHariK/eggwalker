@@ -3,12 +3,14 @@
 
 <head>
   <title>Nano FugueMax</title>
-  <link rel="stylesheet" type="text/css" href="./src/style.css" />
+  <link rel="stylesheet" type="text/css" href="./style.css" />
 </head>
 
 <body>
   <div id="box">
     <div id="textcontainer">
+      <button id="Switch">EGWALKER</button>
+
       <div class="inputbox">
         1
         <textarea id="one" spellcheck="false" placeholder="User 1 (type here)"></textarea>
@@ -65,13 +67,13 @@
       <pre>
 let destIdx=left+1
 for(i=destIdx;;i++){
-  if(!scanning) {destIdx = i}
-  if (i == doc.length || i == right) {break}
-  let other = doc.content[i]
-  if (oleft &lt; left ||
+if(!scanning) {destIdx = i}
+if (i == doc.length || i == right) {break}
+let other = doc.content[i]
+if (oleft &lt; left ||
     (oleft==left && oright==right && compareId)) 
     { break }
-  if (oleft === left) { scanning = oright &lt; right }
+if (oleft === left) { scanning = oright &lt; right }
 }</pre>
 
       <ul>
@@ -98,12 +100,11 @@ for(i=destIdx;;i++){
 
       <pre id="historyContent">
 
-      </pre>
+    </pre>
     </div>
   </div>
-
 </body>
-<script type="module" src="./src/crdt.js"></script>
-<script type="module" src="./src/editor.js"></script>
+
+<script type="module" src="./src/main.ts"></script>
 
 </html>

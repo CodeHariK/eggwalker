@@ -1,45 +1,5 @@
-import { HistoryLog } from "./logs"
-import { cloneItem, cloneDoc, Doc, Id, Item, Version } from "./types"
-
-export function getContent(doc: Doc): string {
-  let content = ''
-  for (const item of doc.content) {
-    if (!item.deleted) {
-      content += item.content
-    }
-  }
-  return content
-}
-
-const findItemAtPos = (doc: Doc, pos: number, stickEnd: boolean = false): number => {
-
-  // Find the index of the item at the specified content position in the document.
-  // if stickend : return item index when pos become 0
-  // if !stickend : return item index when pos become 0 and after all the deleted
-
-  // pos : 2, stickend: true
-  // a,-,-,b,-,c,-,-,-
-  // _,_,_,*
-  // index = 3
-
-  // pos : 2, stickend: false
-  // a,-,-,b,-,c,-,-,-
-  // _,_,_,_,_,*
-  // index = 5
-
-  let i = 0
-  for (; i < doc.content.length; i++) {
-    const item = doc.content[i]
-    if (stickEnd && pos === 0) return i
-    else if (item.deleted) continue
-    else if (pos === 0) return i
-
-    pos--
-  }
-
-  if (pos === 0) return i
-  else throw Error('past end of the document')
-}
+import { HistoryLog } from "../logs"
+import { cloneItem, cloneDoc, Doc, Item, isInVersion, idEq, findItemAtPos, findItemIdxById } from "./types"
 
 function localInsertOne(doc: Doc, pos: number, text: string) {
   const seq = (doc.version[doc.agent] ?? -1) + 1
@@ -76,26 +36,12 @@ export function localDelete(doc: Doc, pos: number, delLen: number) {
     HistoryLog(...[
       `localDelete ${idx}`,
       {
-        type: "deldoc",
+        type: "fuguedeldoc",
         "doc": cloneDoc(doc),
         "highlight": idx,
       }
     ])
   }
-}
-
-const idEq = (a: Id | null, b: Id | null): boolean => (
-  a == b || (a != null && b != null && a[0] === b[0] && a[1] === b[1])
-)
-
-function findItemIdxById(doc: Doc, id: Id | null): number | null {
-  if (id == null) return null
-
-  // return doc.content.findIndex(c => idEq(c.id, id))
-  for (let i = 0; i < doc.content.length; i++) {
-    if (idEq(doc.content[i].id, id)) return i
-  }
-  throw Error("Can't find item")
 }
 
 function integrate(doc: Doc, newItem: Item) {
@@ -169,7 +115,7 @@ function integrate(doc: Doc, newItem: Item) {
       //   "other": other
       // },
       {
-        type: "insdoc",
+        type: "fugueinsdoc",
         "doc": cloneDoc(doc),
         "originleft": left,
         "originright": right,
@@ -220,19 +166,12 @@ function integrate(doc: Doc, newItem: Item) {
   doc.content.splice(destIdx, 0, cloneItem(newItem))
 
   IntegrateLog.push({
-    type: "insdoc",
+    type: "fugueinsdoc",
     "doc": cloneDoc(doc),
     "highlight": destIdx,
   })
 
   HistoryLog(...IntegrateLog)
-}
-
-function isInVersion(id: Id | null, version: Version): boolean {
-  if (id == null) return true
-  const [agent, seq] = id
-  const highestSeq = version[agent]
-  return highestSeq != null && highestSeq >= seq
 }
 
 export function canInsertNow(item: Item, doc: Doc): boolean {
@@ -287,7 +226,7 @@ export function mergeInto(dest: Doc, src: Doc) {
       destItem.deleted = true
       if (!deleted) {
         IntegrateLog.push({
-          type: "deldoc",
+          type: "fuguedeldoc",
           "doc": cloneDoc(dest),
           "highlight": destIdx,
         })

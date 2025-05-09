@@ -1,5 +1,7 @@
 ## CRDT
 
+* https://github.com/mweidner037/fugue/blob/main/fugue-max-simple/src/index.ts
+
 * [Collaborative Text Editing with Eg-walker: Better, Faster, Smaller](https://arxiv.org/pdf/2409.14252)
 * [Collaborative Text Editing Paper](https://arxiv.org/pdf/2305.00583)
 

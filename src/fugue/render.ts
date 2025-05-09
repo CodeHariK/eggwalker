@@ -4,7 +4,7 @@ import { cloneDoc, Doc, Id, Item } from './types';
 const docColorMap = new Map<string, string>
 
 type Log = {
-    type: "insdoc" | "deldoc",
+    type: "fugueinsdoc" | "fuguedeldoc",
     doc: Doc,
     originleft: number,
     originright: number,
