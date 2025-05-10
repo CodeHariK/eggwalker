@@ -1,6 +1,6 @@
 import PriorityQueue from 'priorityqueuejs'
 import { toDotSrc } from './dot'
-import { Branch, CRDTDoc, CRDTItem, findByCurrentPos, findItemIdxAtLV, idToLV, INSERTED, LV, NOT_YET_INSERTED, Op, OpInner, OpLog, OpsToVisit, sortLVs } from './types'
+import { Branch, EgwalkerDoc, CRDTItem, findByCurrentPos, findItemIdxAtLV, idToLV, INSERTED, LV, NOT_YET_INSERTED, Op, OpInner, OpLog, OpsToVisit, sortLVs, compareArrays } from './types'
 import { HistoryLog } from '../logs'
 import { Id } from '../types'
 
@@ -128,7 +128,7 @@ function diff(oplog: OpLog<any>, a: LV[], b: LV[]): { aOnly: LV[], bOnly: LV[] }
   return { aOnly, bOnly }
 }
 
-function retreat(doc: CRDTDoc, oplog: OpLog<any>, opLv: LV) {
+function retreat(doc: EgwalkerDoc, oplog: OpLog<any>, opLv: LV) {
   const op = oplog.ops[opLv]
 
   const targetLV = op.type === 'ins'
@@ -139,7 +139,7 @@ function retreat(doc: CRDTDoc, oplog: OpLog<any>, opLv: LV) {
   item.curState--
 }
 
-function advance(doc: CRDTDoc, oplog: OpLog<any>, opLv: LV) {
+function advance(doc: EgwalkerDoc, oplog: OpLog<any>, opLv: LV) {
   const op = oplog.ops[opLv]
 
   const targetLV = op.type === 'ins'
@@ -151,11 +151,13 @@ function advance(doc: CRDTDoc, oplog: OpLog<any>, opLv: LV) {
 }
 
 function integrate<T>(
-  doc: CRDTDoc, oplog: OpLog<T>, newItem: CRDTItem,
+  doc: EgwalkerDoc, oplog: OpLog<T>, newItem: CRDTItem,
   idx: number, endPos: number, snapshot: T[] | null
 ) {
   let scanIdx = idx
   let scanEndPos = endPos
+
+  let IntegrateLog: any[] = []
 
   // If originLeft is -1, that means it was inserted at the start of the document.
   // We'll pretend there was some item at position -1 which we were inserted to the
@@ -170,9 +172,14 @@ function integrate<T>(
   // This loop scans forward from destIdx until it finds the right place to insert into
   // the list.
   while (scanIdx < right) {
+    IntegrateLog.push(`> scanning:${scanning}, idx:${idx}, endPos:${endPos}, scanIdx:${scanIdx}, scanEndPos:${scanEndPos}`)
+
     let other = doc.items[scanIdx]
 
-    if (other.curState !== NOT_YET_INSERTED) break
+    if (other.curState !== NOT_YET_INSERTED) {
+      IntegrateLog.push("> other.curState !== NOT_YET_INSERTED; break;")
+      break
+    }
 
     let oleft = other.originLeft === -1
       ? -1
@@ -188,6 +195,7 @@ function integrate<T>(
 
     if (oleft < left
       || (oleft === left && oright === right && newItemAgent < otherAgent)) {
+      IntegrateLog.push("> oleft < left or compare agent; break;")
       break
     }
     if (oleft === left) scanning = oright < right
@@ -207,10 +215,19 @@ function integrate<T>(
   const op = oplog.ops[newItem.lv]
   if (op.type !== 'ins') throw Error('Cannot insert a delete')
   if (snapshot != null) snapshot.splice(endPos, 0, op.content)
+
+  IntegrateLog.push({
+    type: "egwalkerinsdoc",
+    "doc": doc,
+    "highlight": idx,
+    "snapshot": snapshot,
+  })
+  HistoryLog(...IntegrateLog)
+
 }
 
 
-function apply<T>(doc: CRDTDoc, oplog: OpLog<T>, snapshot: T[] | null, opLv: LV) {
+function apply<T>(doc: EgwalkerDoc, oplog: OpLog<T>, snapshot: T[] | null, opLv: LV) {
   const op = oplog.ops[opLv]
 
   if (op.type === 'del') {
@@ -273,7 +290,7 @@ function apply<T>(doc: CRDTDoc, oplog: OpLog<T>, snapshot: T[] | null, opLv: LV)
 }
 
 export function checkout<T>(oplog: OpLog<T>): T[] {
-  const doc: CRDTDoc = {
+  const doc: EgwalkerDoc = {
     items: [],
     currentVersion: [],
     delTargets: [],
@@ -289,37 +306,54 @@ export function checkout<T>(oplog: OpLog<T>): T[] {
   return snapshot
 }
 
-function do1Operation<T>(doc: CRDTDoc, oplog: OpLog<T>, lv: LV, snapshot: T[] | null) {
+function do1Operation<T>(doc: EgwalkerDoc, oplog: OpLog<T>, lv: LV, snapshot: T[] | null) {
   const op = oplog.ops[lv]
 
   const { aOnly, bOnly } = diff(oplog, doc.currentVersion, op.parents)
+
+  let IntegrateLog = []
 
   // retreat
   for (const i of aOnly) {
     retreat(doc, oplog, i)
   }
+
+  IntegrateLog.push(...["Retreat",
+    {
+      type: "egwalkerinsdoc",
+      "log": oplog,
+      "doc": doc,
+    }
+  ])
+
   // advance
   for (const i of bOnly) {
     advance(doc, oplog, i)
   }
 
+  IntegrateLog.push(...["Advance",
+    {
+      type: "egwalkerinsdoc",
+      "log": oplog,
+      "doc": doc,
+    }
+  ])
+
   apply(doc, oplog, snapshot, lv)
   doc.currentVersion = [lv]
+
+  IntegrateLog.push(...["Apply",
+    {
+      type: "egwalkerinsdoc",
+      "log": oplog,
+      "doc": doc,
+      "snapshot": snapshot,
+    }
+  ])
+
+  HistoryLog(...IntegrateLog)
 }
 
-function compareArrays(a: LV[], b: LV[]): number {
-  for (let i = 0; i < a.length; i++) {
-    if (b.length <= i) return 1
-
-    const delta = a[i] - b[i]
-    if (delta !== 0) return delta
-  }
-
-  // We've covered the case where a is longer than b above.
-  // But we might not have iterated through all of b.
-  if (a.length < b.length) return -1
-  else return 0
-}
 
 function findOpsToVisit(oplog: OpLog<any>, a: LV[], b: LV[]): OpsToVisit {
   // if (a.length === 0 && b.length === 0) return { start: [], common: [], bOnly: [] }
@@ -398,14 +432,28 @@ function findOpsToVisit(oplog: OpLog<any>, a: LV[], b: LV[]): OpsToVisit {
   }
 }
 
-export function checkoutFancy<T>(oplog: OpLog<T>, branch: Branch<T>, mergeFrontier: LV[] = oplog.frontier) {
+export function checkoutFancy<T>(
+  oplog: OpLog<T>,
+  branch: Branch<T>,
+  mergeFrontier: LV[] = oplog.frontier
+) {
   const {
     commonVersion,
     sharedOps,
     bOnlyOps
   } = findOpsToVisit(oplog, branch.frontier, mergeFrontier)
 
-  const doc: CRDTDoc = {
+  HistoryLog(
+    "checkout fancy findOpsToVisit",
+    { oplog },
+    { branch },
+    { mergeFrontier },
+    { commonVersion },
+    { sharedOps },
+    { bOnlyOps },
+  )
+
+  const doc: EgwalkerDoc = {
     items: [],
     currentVersion: commonVersion,
     delTargets: [],
@@ -437,7 +485,7 @@ export function checkoutFancy<T>(oplog: OpLog<T>, branch: Branch<T>, mergeFronti
     branch.frontier = advanceFrontier(branch.frontier, lv, oplog.ops[lv].parents)
   }
 
-  // console.log('visited:', sharedOps.length + bOnlyOps.length, 'total:', oplog.ops.length)
+  HistoryLog('visited:', sharedOps.length + bOnlyOps.length, 'total:', oplog.ops.length)
 }
 
 

@@ -14,39 +14,40 @@ const attachEditor = (agentName: string, elemName: string) => {
   let lastValue = doc.getString()
   elem.value = lastValue;
 
-  ['textInput', 'keydown', 'keyup', 'select', 'cut', 'paste', 'input'].forEach(eventName => {
-    elem.addEventListener(eventName, _e => {
+  ['textInput', 'keydown', 'keyup', 'select', 'cut', 'paste', 'input']
+    .forEach(eventName => {
+      elem.addEventListener(eventName, _e => {
 
-      setTimeout(() => {
-        // assert(vEq(doc.getLocalVersion(), last_version))
-        let newValue = elem.value.replace(/\r\n/g, '\n')
-        if (newValue !== lastValue) {
-          let { pos, del, ins } = calcDiff(lastValue, newValue)
+        setTimeout(() => {
+          // assert(vEq(doc.getLocalVersion(), last_version))
+          let newValue = elem.value.replace(/\r\n/g, '\n')
+          if (newValue !== lastValue) {
+            let { pos, del, ins } = calcDiff(lastValue, newValue)
 
-          let history: HTMLDivElement[] = []
+            let history: HTMLDivElement[] = []
 
-          if (del > 0) {
-            history = doc.del(pos, del)
+            if (del > 0) {
+              history = doc.del(pos, del)
+            }
+            if (ins !== '') {
+              history = doc.ins(pos, ins)
+            }
+
+            if (doc.getString() != newValue) throw Error('Diff invalid - document does not match')
+
+            // last_version = doc.getLocalVersion()
+            lastValue = newValue
+
+            if (del > 0) {
+              createHistoryTab(history, "del" + agentName)
+            } else {
+              createHistoryTab(history, "ins" + agentName)
+            }
+            history.length = 0
           }
-          if (ins !== '') {
-            history = doc.ins(pos, ins)
-          }
-
-          if (doc.getString() != newValue) throw Error('Diff invalid - document does not match')
-
-          // last_version = doc.getLocalVersion()
-          lastValue = newValue
-
-          if (del > 0) {
-            createHistoryTab(history, "del" + agentName)
-          } else {
-            createHistoryTab(history, "ins" + agentName)
-          }
-          history.length = 0
-        }
-      }, 0)
-    }, false)
-  })
+        }, 0)
+      }, false)
+    })
 
   return {
     doc,

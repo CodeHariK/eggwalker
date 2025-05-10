@@ -1,4 +1,4 @@
-import { HISTORY_LOG_ELEMENTS } from "../logs"
+import { HISTORY_LOG_ELEMENTS, HistoryLog } from "../logs"
 import { Id } from "../types"
 import { checkout, checkoutFancy, localDelete, localInsert, mergeInto } from "./egwalker"
 
@@ -49,7 +49,7 @@ export type CRDTItem = {
     curState: number, // State variable
 }
 
-export type CRDTDoc = {
+export type EgwalkerDoc = {
     items: CRDTItem[],
     currentVersion: LV[],
 
@@ -82,18 +82,46 @@ export class CRDTDocument {
     }
 
     ins(pos: number, text: string): HTMLDivElement[] {
+        HistoryLog(...[
+            "Ins",
+            { "agent": this.agent },
+            { "branch": this.branch, },
+            { "oplog": this.oplog },
+        ])
+
         const inserted = [...text]
         localInsert(this.oplog, this.agent, pos, inserted)
         this.branch.snapshot.splice(pos, 0, ...inserted)
         this.branch.frontier = this.oplog.frontier.slice()
+
+        HistoryLog(...[
+            "Ins",
+            { "agent": this.agent },
+            { "branch": this.branch, },
+            { "oplog": this.oplog },
+        ])
+
         return HISTORY_LOG_ELEMENTS
     }
 
     del(pos: number, delLen: number): HTMLDivElement[] {
+        HistoryLog("Del", {
+            "agent": this.agent,
+            "branch": this.branch,
+            "oplog": this.oplog,
+        })
+
         localDelete(this.oplog, this.agent, pos, delLen)
         // this.snapshot = checkout(this.oplog)
         this.branch.snapshot.splice(pos, delLen)
         this.branch.frontier = this.oplog.frontier.slice()
+
+        HistoryLog("Del", {
+            "agent": this.agent,
+            "branch": this.branch,
+            "oplog": this.oplog,
+        })
+
         return HISTORY_LOG_ELEMENTS
     }
 
@@ -163,4 +191,18 @@ export function findByCurrentPos(items: CRDTItem[], targetPos: number): { idx: n
     }
 
     return { idx, endPos }
+}
+
+export function compareArrays(a: LV[], b: LV[]): number {
+    for (let i = 0; i < a.length; i++) {
+        if (b.length <= i) return 1
+
+        const delta = a[i] - b[i]
+        if (delta !== 0) return delta
+    }
+
+    // We've covered the case where a is longer than b above.
+    // But we might not have iterated through all of b.
+    if (a.length < b.length) return -1
+    else return 0
 }

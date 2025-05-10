@@ -1,5 +1,5 @@
-import { createDocViewer as createFugueDocViewer } from "./fugue/render"
-import { Doc, getContent } from "./fugue/types"
+import { createEgwalkerDocViewer, createFugueDocViewer } from "./render"
+import { FugueDoc, getContent } from "./fugue/types"
 import { Id } from "./types"
 
 export const HISTORY_LOG_ELEMENTS: HTMLDivElement[] = []
@@ -14,7 +14,7 @@ export function HistoryLog(...logs: any[]) {
     logs.forEach((log) => {
 
         if (typeof log === 'object' && log !== null && (log.type === "fugueinsdoc" || log.type === "fuguedeldoc")) {
-            let doc = log.doc as Doc
+            let doc = log.doc as FugueDoc
             if (log.type == "fuguedeldoc") block.style.border = "4px dashed red"
             if (log.type == "fugueinsdoc") block.style.border = "4px dashed green"
 
@@ -24,6 +24,10 @@ export function HistoryLog(...logs: any[]) {
             }
             block.innerHTML += `<pre>${syntaxHighlight(doc.version)}</pre>`
             block.innerHTML += `Content: ${getContent(doc)}`
+        }
+        else if (typeof log === 'object' && log !== null && log.oplog) {
+            block.innerHTML += `<pre>${syntaxHighlight(log.oplog)}</pre>`
+            block.innerHTML += createEgwalkerDocViewer(log.oplog).innerHTML
         }
         else if (typeof log === 'object' && log !== null) {
             block.innerHTML += `<pre>${syntaxHighlight(log)}</pre>`
@@ -93,7 +97,8 @@ export function syntaxHighlight(obj: any) {
 }
 
 function idToString(id: Id | null): string | null {
-    return id ? `${id[0]}:${id[1]}` : null;
+    return String(id)
+    // return id ? `${id[0]}:${id[1]}` : null;
 }
 
 export function itemReplacer(key: string, value: any): any {

@@ -1,7 +1,7 @@
 import { HistoryLog } from "../logs"
-import { cloneItem, cloneDoc, Doc, Item, isInVersion, idEq, findItemAtPos, findItemIdxById } from "./types"
+import { cloneItem, cloneDoc, FugueDoc, FugueItem, isInVersion, idEq, findItemAtPos, findItemIdxById } from "./types"
 
-function localInsertOne(doc: Doc, pos: number, text: string) {
+function localInsertOne(doc: FugueDoc, pos: number, text: string) {
   const seq = (doc.version[doc.agent] ?? -1) + 1
 
   const idx = findItemAtPos(doc, pos, true)
@@ -15,7 +15,7 @@ function localInsertOne(doc: Doc, pos: number, text: string) {
   })
 }
 
-export function localInsert(doc: Doc, pos: number, text: string) {
+export function localInsert(doc: FugueDoc, pos: number, text: string) {
   const content = [...text]
   for (const c of content) {
     localInsertOne(doc, pos, c)
@@ -23,11 +23,11 @@ export function localInsert(doc: Doc, pos: number, text: string) {
   }
 }
 
-function remoteInsert(doc: Doc, item: Item) {
+function remoteInsert(doc: FugueDoc, item: FugueItem) {
   integrate(doc, item)
 }
 
-export function localDelete(doc: Doc, pos: number, delLen: number) {
+export function localDelete(doc: FugueDoc, pos: number, delLen: number) {
   while (delLen > 0) {
     const idx = findItemAtPos(doc, pos, false)
     doc.content[idx].deleted = true
@@ -44,7 +44,7 @@ export function localDelete(doc: Doc, pos: number, delLen: number) {
   }
 }
 
-function integrate(doc: Doc, newItem: Item) {
+function integrate(doc: FugueDoc, newItem: FugueItem) {
   const [agent, seq] = newItem.id
   const lastSeen = doc.version[agent] ?? -1
   if (seq !== lastSeen + 1) throw Error('Operations out of order')
@@ -64,26 +64,6 @@ function integrate(doc: Doc, newItem: Item) {
   let IntegrateLog: any[] = []
 
   let scanning = false
-
-  /*
-                oright
-              <    =    >
-            +----+----+---+
-    oleft < | I  | I  | I |
-          = | ?  | id | S |
-          > | S  | S  | S |
-            +----+----+---+
-    Legend:
-    I  = Insert (break)
-    ?  = Ambiguous (scan)
-    id = Compare id
-    S  = Skip (continue)
-
-  •	Insert immediately if other has an earlier originLeft.
-  •	Scan (ambiguous) when origins are equal but destination is earlier — could be an “insertion race”.
-  •	Compare by ID when origins are identical — deterministic ordering.
-  •	Skip when the other item comes from a later insertion.
-  */
 
   // This loop scans forward from destIdx until it finds the right place to insert into the list.
   for (let i = destIdx; ; i++) {
@@ -174,7 +154,7 @@ function integrate(doc: Doc, newItem: Item) {
   HistoryLog(...IntegrateLog)
 }
 
-export function canInsertNow(item: Item, doc: Doc): boolean {
+export function canInsertNow(item: FugueItem, doc: FugueDoc): boolean {
   // We need op.id to not be in doc.versions
   // originLeft and originRight to be in.
   // We're also inserting each item from each agent in sequence, either seq == 0 or seq-1 to be in
@@ -185,8 +165,8 @@ export function canInsertNow(item: Item, doc: Doc): boolean {
     && isInVersion(item.originRight, doc.version)
 }
 
-export function mergeInto(dest: Doc, src: Doc) {
-  const missing: (Item | null)[] = src.content.filter(item => !isInVersion(item.id, dest.version))
+export function mergeInto(dest: FugueDoc, src: FugueDoc) {
+  const missing: (FugueItem | null)[] = src.content.filter(item => !isInVersion(item.id, dest.version))
   let remaining = missing.length
 
   let IntegrateLog = []

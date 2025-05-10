@@ -1,4 +1,4 @@
-import type { LV, OpLog } from "./egwalker.js"
+import { LV, OpLog } from "./types"
 
 const COLOR = {
   'Red': "red",

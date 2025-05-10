@@ -12,10 +12,12 @@ const attachEditor = (agentName: string, elemName: string) => {
 
   const doc = new CRDTDocument(agentName)
   let lastValue = doc.getString()
-  elem.value = lastValue
+  elem.value = lastValue;
 
-    ;['textInput', 'keydown', 'keyup', 'select', 'cut', 'paste', 'input'].forEach(eventName => {
+  ['textInput', 'keydown', 'keyup', 'select', 'cut', 'paste', 'input']
+    .forEach(eventName => {
       elem.addEventListener(eventName, _e => {
+
         setTimeout(() => {
           // assert(vEq(doc.getLocalVersion(), last_version))
           let newValue = elem.value.replace(/\r\n/g, '\n')

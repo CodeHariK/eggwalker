@@ -1,21 +1,23 @@
 import { dia, shapes } from '@joint/core';
-import { cloneDoc, Doc, Id, Item } from './types';
+import { cloneDoc, FugueDoc, FugueItem } from './fugue/types';
+import { Id } from './types';
+import { EgwalkerDoc, OpLog } from './egwalker/types';
 
 const docColorMap = new Map<string, string>
 
-type Log = {
+type FugueLog = {
     type: "fugueinsdoc" | "fuguedeldoc",
-    doc: Doc,
+    doc: FugueDoc,
     originleft: number,
     originright: number,
     destIdx: number,
-    newItem: Item,
+    newItem: FugueItem,
     highlight: number
 };
 
-export function createDocViewer(log: Log): HTMLDivElement {
+export function createFugueDocViewer(log: FugueLog): HTMLDivElement {
 
-    const doc: Doc = cloneDoc(log.doc)
+    const doc: FugueDoc = cloneDoc(log.doc)
 
     doc.content.splice(0, 0, {
         content: "start",
@@ -76,8 +78,44 @@ export function createDocViewer(log: Log): HTMLDivElement {
     return paperWrapper
 }
 
+// type EgwalkerLog = {
+//     type: "egwalkerinsdoc" | "egwalkerdeldoc",
+//     doc: EgwalkerDoc,
+//     originleft: number,
+//     originright: number,
+//     destIdx: number,
+//     highlight: number,
+// };
+
+export function createEgwalkerDocViewer(log: OpLog<string>): HTMLDivElement {
+
+    console.log(log)
+
+    const paperWrapper = document.createElement('div');
+
+    const paperElement = document.createElement('div');
+    paperElement.style.width = '100%';
+    paperElement.style.height = '100px';
+    paperElement.classList.add('doc-paper');
+
+    paperWrapper.appendChild(paperElement);
+
+    const graph = new dia.Graph();
+
+    new dia.Paper({
+        el: paperElement,
+        model: graph,
+        width: 5000,
+        height: 200,
+        gridSize: 10,
+        interactive: false,
+    });
+
+    return paperWrapper
+}
+
 function drawItem(
-    item: Item,
+    item: FugueItem,
     index: number,
     highlight: boolean,
     spacing: number,
@@ -110,10 +148,10 @@ function drawItem(
 let rtx = 5
 
 function drawLink(
-    item: Item,
+    item: FugueItem,
     current: dia.Element | undefined,
     idMap: Map<string, dia.Element>,
-    doc: Doc,
+    doc: FugueDoc,
     graph: dia.Graph,
     solid: boolean) {
     if (!current || item.id[0] == "#") return;
@@ -201,7 +239,7 @@ function generateLightHSL() {
 }
 
 function generateVersionColorMap(
-    doc: Doc,
+    doc: FugueDoc,
     existingMap?: Map<string, string>
 ): Map<string, string> {
     const colorMap = existingMap ?? new Map<string, string>();

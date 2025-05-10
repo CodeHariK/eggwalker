@@ -2,7 +2,7 @@ import { localDelete, localInsert, mergeInto } from "./fugue"
 import { HISTORY_LOG_ELEMENTS } from "../logs"
 import { Id } from "../types"
 
-export type Item = {
+export type FugueItem = {
     content: string, // 1 character
 
     id: Id,
@@ -14,13 +14,13 @@ export type Item = {
 
 export type Version = Record<string, number>
 
-export type Doc = {
+export type FugueDoc = {
     agent: string,
-    content: Item[],
+    content: FugueItem[],
     version: Version,
 }
 
-function createDoc(agentName: string): Doc {
+function createDoc(agentName: string): FugueDoc {
     return {
         agent: agentName,
         content: [],
@@ -28,7 +28,7 @@ function createDoc(agentName: string): Doc {
     }
 }
 
-export function cloneDoc(doc: Doc): any {
+export function cloneDoc(doc: FugueDoc): any {
     return {
         agent: doc.agent,
         string: getContent(doc),
@@ -43,7 +43,7 @@ export function cloneDoc(doc: Doc): any {
     }
 }
 
-export function cloneItem(item: Item): Item {
+export function cloneItem(item: FugueItem): FugueItem {
     return {
         content: item.content,
         id: [item.id[0], item.id[1]],
@@ -54,7 +54,7 @@ export function cloneItem(item: Item): Item {
 }
 
 export class CRDTDocument {
-    doc: Doc
+    doc: FugueDoc
 
     constructor(agent: string) {
         this.doc = createDoc(agent)
@@ -95,7 +95,7 @@ export const idEq = (a: Id | null, b: Id | null): boolean => (
     a == b || (a != null && b != null && a[0] === b[0] && a[1] === b[1])
 )
 
-export function findItemIdxById(doc: Doc, id: Id | null): number | null {
+export function findItemIdxById(doc: FugueDoc, id: Id | null): number | null {
     if (id == null) return null
 
     // return doc.content.findIndex(c => idEq(c.id, id))
@@ -105,7 +105,7 @@ export function findItemIdxById(doc: Doc, id: Id | null): number | null {
     throw Error("Can't find item")
 }
 
-export const findItemAtPos = (doc: Doc, pos: number, stickEnd: boolean = false): number => {
+export const findItemAtPos = (doc: FugueDoc, pos: number, stickEnd: boolean = false): number => {
 
     // Find the index of the item at the specified content position in the document.
     // if stickend : return item index when pos become 0
@@ -135,7 +135,7 @@ export const findItemAtPos = (doc: Doc, pos: number, stickEnd: boolean = false):
     else throw Error('past end of the document')
 }
 
-export function getContent(doc: Doc): string {
+export function getContent(doc: FugueDoc): string {
     let content = ''
     for (const item of doc.content) {
         if (!item.deleted) {
