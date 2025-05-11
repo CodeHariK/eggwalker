@@ -118,7 +118,7 @@ function diff(oplog: OpLog<any>, a: LV[], b: LV[]): { aOnly: LV[], bOnly: LV[] }
 
   HistoryLog([
     "Diff",
-    { "oplog": oplog },
+    { oplog },
     { "a": a },
     { "b": b },
     { "aOnly": aOnly },
@@ -216,12 +216,16 @@ function integrate<T>(
   if (op.type !== 'ins') throw Error('Cannot insert a delete')
   if (snapshot != null) snapshot.splice(endPos, 0, op.content)
 
-  IntegrateLog.push({
-    type: "egwalkerinsdoc",
-    "doc": doc,
-    "highlight": idx,
-    "snapshot": snapshot,
-  })
+  IntegrateLog.push(
+    {
+      type: "egwalkerinsdoc",
+      "doc": doc,
+      "highlight": idx,
+      "snapshot": snapshot,
+    },
+    {
+      oplog
+    })
   HistoryLog(...IntegrateLog)
 
 }
@@ -323,7 +327,8 @@ function do1Operation<T>(doc: EgwalkerDoc, oplog: OpLog<T>, lv: LV, snapshot: T[
       type: "egwalkerinsdoc",
       "log": oplog,
       "doc": doc,
-    }
+    },
+    { oplog }
   ])
 
   // advance
@@ -355,7 +360,7 @@ function do1Operation<T>(doc: EgwalkerDoc, oplog: OpLog<T>, lv: LV, snapshot: T[
 }
 
 
-function findOpsToVisit(oplog: OpLog<any>, a: LV[], b: LV[]): OpsToVisit {
+export function findOpsToVisit(oplog: OpLog<any>, a: LV[], b: LV[]): OpsToVisit {
   // if (a.length === 0 && b.length === 0) return { start: [], common: [], bOnly: [] }
 
   type MergePoint = {

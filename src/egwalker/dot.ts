@@ -1,3 +1,5 @@
+import graphviz from 'graphviz-wasm';
+
 import { LV, OpLog } from "./types"
 
 const COLOR = {
@@ -18,7 +20,7 @@ export function toDotSrc(oplog: OpLog<any>): string {
   lines.push("\tnode [shape=box style=filled]")
   lines.push("\tedge [color=\"#333333\" dir=none]")
 
-  lines.push(`\tROOT [fillcolor=${COLOR.Red} label=<ROOT>]`)
+  lines.push(`\tROOT [fillcolor=${COLOR.Red} label=ROOT]`)
 
   const inGraph = new Set<string>()
 
@@ -54,4 +56,9 @@ export function toDotSrc(oplog: OpLog<any>): string {
 
   lines.push('}')
   return lines.join('\n')
+}
+
+export function renderGraphAndGetInnerHTML(dotString: string) {
+  const svg = graphviz.layout(dotString);
+  return svg
 }

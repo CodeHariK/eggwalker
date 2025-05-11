@@ -1,6 +1,7 @@
 import { createEgwalkerDocViewer, createFugueDocViewer } from "./render"
 import { FugueDoc, getContent } from "./fugue/types"
 import { Id } from "./types"
+import { renderGraphAndGetInnerHTML, toDotSrc } from "./egwalker/dot"
 
 export const HISTORY_LOG_ELEMENTS: HTMLDivElement[] = []
 
@@ -11,7 +12,7 @@ export function HistoryLog(...logs: any[]) {
     const block = document.createElement("div")
     block.classList.add("doc-object")
 
-    logs.forEach((log) => {
+    for (const log of logs) {
 
         if (typeof log === 'object' && log !== null && (log.type === "fugueinsdoc" || log.type === "fuguedeldoc")) {
             let doc = log.doc as FugueDoc
@@ -26,7 +27,9 @@ export function HistoryLog(...logs: any[]) {
             block.innerHTML += `Content: ${getContent(doc)}`
         }
         else if (typeof log === 'object' && log !== null && log.oplog) {
-            block.innerHTML += `<pre>${syntaxHighlight(log.oplog)}</pre>`
+            block.innerHTML += `@@@@@<pre>${syntaxHighlight(log.oplog)}</pre>~`
+            // block.innerHTML += toDotSrc(log.oplog)
+            block.innerHTML += renderGraphAndGetInnerHTML(toDotSrc(log.oplog))
             block.innerHTML += createEgwalkerDocViewer(log.oplog).innerHTML
         }
         else if (typeof log === 'object' && log !== null) {
@@ -37,7 +40,7 @@ export function HistoryLog(...logs: any[]) {
         }
 
         container.appendChild(block)
-    })
+    }
 
     HISTORY_LOG_ELEMENTS.push(container)
 }
