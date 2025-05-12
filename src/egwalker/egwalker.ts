@@ -1,8 +1,7 @@
-import PriorityQueue from 'priorityqueuejs'
-import { toDotSrc } from './dot'
-import { Branch, EgwalkerDoc, CRDTItem, findByCurrentPos, findItemIdxAtLV, idToLV, INSERTED, LV, NOT_YET_INSERTED, Op, OpInner, OpLog, OpsToVisit, sortLVs, compareArrays } from './types'
-import { HistoryLog } from '../logs'
-import { Id } from '../types'
+import PriorityQueue from "priorityqueuejs"
+import { HistoryLog } from "../logs"
+import { Id } from "../types"
+import { Branch, compareArrays, CRDTItem, EgwalkerDoc, findByCurrentPos, findItemIdxAtLV, idToLV, INSERTED, LV, NOT_YET_INSERTED, Op, OpInner, OpLog, OpsToVisit, sortLVs } from "./types"
 
 function pushLocalOp<T>(oplog: OpLog<T>, agent: string, op: OpInner<T>) {
   const seq = (oplog.version[agent] ?? -1) + 1
@@ -492,26 +491,3 @@ export function checkoutFancy<T>(
 
   HistoryLog('visited:', sharedOps.length + bOnlyOps.length, 'total:', oplog.ops.length)
 }
-
-
-
-// const oplog1 = createOpLog<string>()
-// localInsert(oplog1, 'seph', 0, [...'hi'])
-
-// const oplog2 = createOpLog<string>()
-// localInsert(oplog2, 'alice', 0, [...'yo'])
-
-// mergeInto(oplog1, oplog2)
-// mergeInto(oplog2, oplog1)
-
-// localInsert(oplog2, 'alice', 4, [...'x'])
-
-// // console.log(oplog1)
-// // console.table(oplog2.ops)
-// // console.table(oplog2.ops)
-
-// const result = checkout(oplog2).join('')
-// console.log('doc is', result)
-
-
-// console.log(toDotSrc(oplog2))

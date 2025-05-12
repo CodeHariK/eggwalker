@@ -35,6 +35,54 @@ function createOpLog<T>(): OpLog<T> {
     }
 }
 
+export function deepCloneOpLog<T>(oplog: OpLog<T>): OpLog<T> {
+    return {
+        ops: oplog.ops.map(op => ({
+            type: op.type,
+            content: op.type === 'ins' ? structuredClone(op.content) : undefined,
+            pos: op.pos,
+            id: structuredClone(op.id),
+            parents: [...op.parents],
+        }) as Op<T>),
+        frontier: [...oplog.frontier],
+        version: { ...oplog.version },
+    };
+}
+
+
+export function splitOpsByAgent<T>(log: OpLog<T>): {
+    s: Record<string, (OpInner<T> & { idx: number })[]>,
+    m: Set<string>,
+} {
+    const mergePoints = new Set<string>();
+
+    mergePoints.add("root")
+
+    for (const op of log.ops) {
+        const parents = op.parents.length === 0
+            ? ['root']
+            : op.parents.map(String).sort((a, b) => Number(a) - Number(b));
+
+        if (parents.length > 1) {
+            const mergeId = `merge_${parents.join('_')}`;
+            mergePoints.add(mergeId);
+        }
+    }
+
+    const byAgent: Record<string, (OpInner<T> & { idx: number })[]> = {};
+
+    for (let i = 0; i < log.ops.length; i++) {
+        let op = log.ops[i]
+        const agent = op.id[0];
+        if (!byAgent[agent]) {
+            byAgent[agent] = [];
+        }
+        byAgent[agent].push({ ...op, idx: i });
+    }
+
+    return { s: byAgent, m: mergePoints };
+}
+
 export const NOT_YET_INSERTED = -1
 export const INSERTED = 0
 // DELETED(1) = 1, DELETED(2) = 2, ....

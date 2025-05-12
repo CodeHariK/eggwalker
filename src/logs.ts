@@ -27,7 +27,7 @@ export function HistoryLog(...logs: any[]) {
             block.innerHTML += `Content: ${getContent(doc)}`
         }
         else if (typeof log === 'object' && log !== null && log.oplog) {
-            block.innerHTML += `@@@@@<pre>${syntaxHighlight(log.oplog)}</pre>~`
+            block.innerHTML += `<pre>${syntaxHighlight(log.oplog)}</pre>`
             // block.innerHTML += toDotSrc(log.oplog)
             block.innerHTML += renderGraphAndGetInnerHTML(toDotSrc(log.oplog))
             block.innerHTML += createEgwalkerDocViewer(log.oplog).innerHTML

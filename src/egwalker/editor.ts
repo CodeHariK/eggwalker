@@ -3,7 +3,7 @@
 
 import { calcDiff, elemById } from "../editor";
 import { createHistoryTab, HistoryLog, InitHistory } from "../logs"
-import { CRDTDocument } from "./types"
+import { CRDTDocument } from "./types";
 
 const attachEditor = (agentName: string, elemName: string) => {
   const old_elem = elemById(elemName) as HTMLTextAreaElement

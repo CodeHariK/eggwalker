@@ -1,7 +1,7 @@
 import { dia, shapes } from '@joint/core';
 import { cloneDoc, FugueDoc, FugueItem } from './fugue/types';
 import { Id } from './types';
-import { EgwalkerDoc, OpInner, OpLog } from './egwalker/types';
+import { deepCloneOpLog, Op, OpLog } from './egwalker/types';
 
 const docColorMap = new Map<string, string>
 
@@ -87,46 +87,10 @@ export function createFugueDocViewer(log: FugueLog): HTMLDivElement {
 //     highlight: number,
 // };
 
-// Create a custom shape for operations
-const OpShape = dia.Element.define('op.Shape', {
-    attrs: {
-        body: {
-            refWidth: '100%',
-            refHeight: '100%',
-            strokeWidth: 1,
-            rx: 5,
-            ry: 5,
-            fill: '#ffffff',
-            stroke: '#000000',
-        },
-        label: {
-            textVerticalAnchor: 'middle',
-            textAnchor: 'middle',
-            refX: '50%',
-            refY: '50%',
-            fontSize: 12,
-            fill: '#333333',
-        },
-        icon: {
-            refX: 5,
-            refY: 5,
-            fontSize: 14,
-        }
-    }
-}, {
-    markup: [{
-        tagName: 'rect',
-        selector: 'body'
-    }, {
-        tagName: 'text',
-        selector: 'label'
-    }, {
-        tagName: 'text',
-        selector: 'icon'
-    }]
-});
+export function createEgwalkerDocViewer(orilog: OpLog<string>): HTMLDivElement {
 
-export function createEgwalkerDocViewer(log: OpLog<string>): HTMLDivElement {
+    let log = deepCloneOpLog(orilog)
+
     // Create container for the viewer
     const container = document.createElement('div');
     container.style.display = 'flex';
@@ -197,302 +161,164 @@ export function createEgwalkerDocViewer(log: OpLog<string>): HTMLDivElement {
     return container;
 }
 
-// function renderOpLog(graph: dia.Graph, log: OpLog<string>): void {
-//     const elements: dia.Element[] = [];
-//     const links: dia.Link[] = [];
-
-//     const idMap = new Map<string, dia.Element>();
-
-//     const depths = calculateDepth(log);
-//     const verticalSpacing = 100;
-//     const horizontalSpacing = 200;
-
-//     const originToIndices: Record<string, number[]> = {};
-//     log.ops.forEach((op, i) => {
-//         const origin = op.id[0];
-//         if (!originToIndices[origin]) originToIndices[origin] = [];
-//         originToIndices[origin].push(i);
-//     });
-//     const originList = Object.keys(originToIndices);
-//     const originX: Record<string, number> = {};
-//     originList.forEach((origin, i) => {
-//         originX[origin] = i * horizontalSpacing;
-//     });
-
-//     const allIndices = new Set<number>();
-
-//     log.ops.forEach((op, index) => {
-//         allIndices.add(index);
-//         op.parents.forEach(parent => {
-//             allIndices.add(parent);
-//         });
-//     });
-
-//     for (const index of allIndices) {
-//         const op = log.ops[index];
-
-//         // If the op is undefined (i.e., structural merge point with no op),
-//         // create a dummy merge node
-//         const isDummy = !op;
-//         const labelText = isDummy
-//             ? 'Merge'
-//             : op.type === 'ins'
-//                 ? `+ "${(op as OpInner<string> & { type: 'ins' }).content}" @ ${op.pos}`
-//                 : `- Del @ ${op.pos}`;
-
-//         const fillColor = isDummy ? '#f0f0f0'
-//             : op.type === 'ins' ? '#e3f2fd'
-//                 : '#ffebee';
-
-//         const strokeColor = isDummy ? '#9e9e9e'
-//             : op.type === 'ins' ? '#2196f3'
-//                 : '#f44336';
-
-//         const element = new shapes.standard.Rectangle({
-//             id: `op-${index}`,
-//             position: { x: 0, y: 0 }, // layout will be updated later
-//             size: { width: 120, height: 50 },
-//             attrs: {
-//                 body: {
-//                     fill: fillColor,
-//                     stroke: strokeColor,
-//                     strokeWidth: 2,
-//                     rx: 5,
-//                     ry: 5,
-//                 },
-//                 label: {
-//                     text: labelText,
-//                     fill: '#333',
-//                     fontSize: 12,
-//                     textAnchor: 'middle',
-//                     textVerticalAnchor: 'middle',
-//                 }
-//             }
-//         });
-
-//         elements.push(element);
-//         console.log(index)
-//         idMap.set(`op-${index}`, element);
-//     }
-
-//     elements.forEach((element, index) => {
-//         const op = log.ops[index];
-//         const depth = depths[index];
-//         let x: number;
-
-//         if (op.parents.length > 1) {
-//             const parentXs = op.parents.map(p => elements[p].position().x);
-//             const avgX = parentXs.reduce((a, b) => a + b, 0) / parentXs.length;
-//             x = avgX;
-//         } else {
-//             x = originX[op.id[0]];
-//         }
-
-//         const y = depth * verticalSpacing;
-//         element.position(x, y);
-//     });
-
-//     // Create links
-//     // log.ops.forEach((op, index) => {
-//     //     op.parents.forEach(parentIndex => {
-//     //         if (parentIndex >= 0 && parentIndex < log.ops.length) {
-
-//     //             const source = idMap.get(`op-${parentIndex}`);
-//     //             const target = idMap.get(`op-${index}`);
-//     //             if (!source || !target) return;
-
-//     //             const sourceCenter = source.getBBox().center();
-//     //             const targetCenter = target.getBBox().center();
-
-//     //             const link = new shapes.standard.Link({
-//     //                 source: { x: sourceCenter.x, y: sourceCenter.y },
-//     //                 target: { x: targetCenter.x, y: targetCenter.y },
-//     //                 attrs: {
-//     //                     line: {
-//     //                         stroke: '#999',
-//     //                         strokeWidth: 2,
-//     //                         targetMarker: {
-//     //                             type: 'path',
-//     //                             d: 'M 10 -5 0 0 10 5 z',
-//     //                             fill: '#333'
-//     //                         }
-//     //                     }
-//     //                 },
-//     //                 connector: { name: 'smooth' },
-//     //                 router: { name: 'orthogonal' },
-//     //                 markup: [
-//     //                     {
-//     //                         tagName: 'path',
-//     //                         selector: 'line',
-//     //                         attributes: {
-//     //                             fill: 'none',
-//     //                             stroke: '#999',
-//     //                             'stroke-width': 2
-//     //                         }
-//     //                     },
-//     //                     {
-//     //                         tagName: 'path',
-//     //                         selector: 'targetMarker',
-//     //                         attributes: {
-//     //                             d: 'M 10 -5 0 0 10 5 z',
-//     //                             fill: '#333',
-//     //                             stroke: 'none'
-//     //                         }
-//     //                     }
-//     //                 ]
-//     //             });
-
-//     //             links.push(link);
-//     //         }
-//     //     });
-//     // });
-
-//     graph.resetCells([...elements, ...links]);
-// }
-
 function renderOpLog(graph: dia.Graph, log: OpLog<string>): void {
+
     const elements: dia.Element[] = [];
     const links: dia.Link[] = [];
+
     const idMap = new Map<string, dia.Element>();
 
     // Clone original ops so we can add synthetic merge nodes
-    const extendedOps: (typeof log.ops[number] | { type: 'merge'; id: [string, number]; pos: -1; parents: number[] })[] = [...log.ops];
-    const mergeNodeMap = new Map<string, number>(); // Key: parent ids string, Value: synthetic index
+    const extendedOps: (Op<string>[][] | {
+        type: 'merge';
+        id: [string, number];
+        pos: -1;
+        parents: number[]
+    })[] = [
+            {
+                type: 'merge',
+                id: ['Root', 0],
+                pos: -1,
+                parents: [],
+            },
+        ];
 
-    // Insert merge nodes for multi-parent ops
-    for (let i = 0; i < extendedOps.length; i++) {
-        const op = extendedOps[i];
-        if (op.parents.length > 1) {
-            const key = op.parents.sort((a, b) => a - b).join(',');
-            if (!mergeNodeMap.has(key)) {
-                const mergeIndex = extendedOps.length;
-                mergeNodeMap.set(key, mergeIndex);
-                extendedOps.push({
-                    type: 'merge',
-                    id: ['merge', mergeIndex],
-                    pos: -1,
-                    parents: op.parents
-                });
-            }
+    const mergeNodeMap = new Map<string, number>();
 
-            // Update current op to use the merge node as parent
-            const mergeIndex = mergeNodeMap.get(key)!;
-            op.parents = [mergeIndex];
-        }
-    }
+    // // Insert merge nodes for multi-parent ops
+    // for (let i = 0; i < extendedOps.length; i++) {
+    //     const op = extendedOps[i];
+    //     if (op.parents.length > 1) {
+    //         const key = op.parents.sort((a, b) => a - b).join(',');
+    //         if (!mergeNodeMap.has(key)) {
+    //             const mergeIndex = extendedOps.length;
+    //             mergeNodeMap.set(key, mergeIndex);
+    //             extendedOps.push({
+    //                 type: 'merge',
+    //                 id: ['merge', mergeIndex],
+    //                 pos: -1,
+    //                 parents: op.parents
+    //             });
+    //         }
 
-    // Create elements
-    extendedOps.forEach((op, index) => {
-        let element: dia.Element;
-        const isInsert = op.type === 'ins';
-        const isDelete = op.type === 'del';
-        const isMerge = op.type === 'merge';
+    //         // Update current op to use the merge node as parent
+    //         const mergeIndex = mergeNodeMap.get(key)!;
+    //         op.parents = [mergeIndex];
+    //     }
+    // }
 
-        let labelText = '';
-        if (isInsert) {
-            labelText = `+ "${(op as any).content}" @ ${op.pos}`;
-        } else if (isDelete) {
-            labelText = `- Del @ ${op.pos}`;
-        } else if (isMerge) {
-            labelText = `Merge\n[${op.parents.join(', ')}]`;
-        }
+    // // Create elements
+    // extendedOps.forEach((op, index) => {
+    //     let element: dia.Element;
+    //     const isInsert = op.type === 'ins';
+    //     const isDelete = op.type === 'del';
+    //     const isMerge = op.type === 'merge';
 
-        element = new shapes.standard.Rectangle({
-            id: `op-${index}`,
-            position: { x: 0, y: 0 },
-            size: { width: 120, height: 50 },
-            attrs: {
-                body: {
-                    fill: isInsert ? '#e3f2fd' : isDelete ? '#ffebee' : '#eeeeee',
-                    stroke: isInsert ? '#2196f3' : isDelete ? '#f44336' : '#888',
-                    strokeWidth: 2,
-                    rx: 5,
-                    ry: 5
-                },
-                label: {
-                    text: labelText,
-                    fill: '#333',
-                    fontSize: 12,
-                    textAnchor: 'middle',
-                    textVerticalAnchor: 'middle'
-                }
-            }
-        });
+    //     let labelText = '';
+    //     if (isInsert) {
+    //         labelText = `+ "${(op as any).content}" @ ${op.pos}`;
+    //     } else if (isDelete) {
+    //         labelText = `- Del @ ${op.pos}`;
+    //     } else if (isMerge) {
+    //         labelText = `Merge\n[${op.parents.join(', ')}]`;
+    //     }
 
-        // Highlight frontier
-        if (log.frontier.includes(index)) {
-            element.attr('body/strokeWidth', 3);
-            element.attr('body/stroke', '#4caf50');
-        }
+    //     element = new shapes.standard.Rectangle({
+    //         id: `op-${index}`,
+    //         position: { x: 0, y: 0 },
+    //         size: { width: 120, height: 50 },
+    //         attrs: {
+    //             body: {
+    //                 fill: isInsert ? '#e3f2fd' : isDelete ? '#ffebee' : '#eeeeee',
+    //                 stroke: isInsert ? '#2196f3' : isDelete ? '#f44336' : '#888',
+    //                 strokeWidth: 2,
+    //                 rx: 5,
+    //                 ry: 5
+    //             },
+    //             label: {
+    //                 text: labelText,
+    //                 fill: '#333',
+    //                 fontSize: 12,
+    //                 textAnchor: 'middle',
+    //                 textVerticalAnchor: 'middle'
+    //             }
+    //         }
+    //     });
 
-        elements.push(element);
-        idMap.set(`op-${index}`, element);
-    });
+    //     // Highlight frontier
+    //     if (log.frontier.includes(index)) {
+    //         element.attr('body/strokeWidth', 3);
+    //         element.attr('body/stroke', '#4caf50');
+    //     }
 
-    // Layout
-    const depths = calculateDepth({ ops: extendedOps });
-    const verticalSpacing = 100;
-    const horizontalSpacing = 180;
+    //     elements.push(element);
+    //     idMap.set(`op-${index}`, element);
+    // });
 
-    const originToIndices: Record<string, number[]> = {};
-    extendedOps.forEach((op, i) => {
-        const origin = op.id[0];
-        if (!originToIndices[origin]) originToIndices[origin] = [];
-        originToIndices[origin].push(i);
-    });
+    // // Layout
+    // const depths = calculateDepth({ ops: extendedOps });
+    // const verticalSpacing = 100;
+    // const horizontalSpacing = 180;
 
-    const originList = Object.keys(originToIndices);
-    const originX: Record<string, number> = {};
-    originList.forEach((origin, i) => {
-        originX[origin] = i * horizontalSpacing;
-    });
+    // const originToIndices: Record<string, number[]> = {};
+    // extendedOps.forEach((op, i) => {
+    //     const origin = op.id[0];
+    //     if (!originToIndices[origin]) originToIndices[origin] = [];
+    //     originToIndices[origin].push(i);
+    // });
 
-    elements.forEach((element, index) => {
-        const op = extendedOps[index];
-        const depth = depths[index];
-        let x: number;
+    // const originList = Object.keys(originToIndices);
+    // const originX: Record<string, number> = {};
+    // originList.forEach((origin, i) => {
+    //     originX[origin] = i * horizontalSpacing;
+    // });
 
-        if (op.parents.length > 1) {
-            const parentXs = op.parents.map(p => elements[p]?.position().x ?? 0);
-            x = parentXs.reduce((a, b) => a + b, 0) / parentXs.length;
-        } else {
-            x = originX[op.id[0]] ?? 0;
-        }
+    // elements.forEach((element, index) => {
+    //     const op = extendedOps[index];
+    //     const depth = depths[index];
+    //     let x: number;
 
-        const y = depth * verticalSpacing;
-        element.position(x, y);
-    });
+    //     if (op.parents.length > 1) {
+    //         const parentXs = op.parents.map(p => elements[p]?.position().x ?? 0);
+    //         x = parentXs.reduce((a, b) => a + b, 0) / parentXs.length;
+    //     } else {
+    //         x = originX[op.id[0]] ?? 0;
+    //     }
 
-    // Create links
-    extendedOps.forEach((op, index) => {
-        op.parents.forEach(parentIndex => {
-            const source = idMap.get(`op-${parentIndex}`);
-            const target = idMap.get(`op-${index}`);
-            if (!source || !target) return;
+    //     const y = depth * verticalSpacing;
+    //     element.position(x, y);
+    // });
 
-            const link = new shapes.standard.Link({
-                source: { id: `op-${parentIndex}` },
-                target: { id: `op-${index}` },
-                attrs: {
-                    line: {
-                        stroke: '#999',
-                        strokeWidth: 2,
-                        targetMarker: {
-                            type: 'path',
-                            d: 'M 10 -5 0 0 10 5 z',
-                            fill: '#333'
-                        }
-                    }
-                },
-                connector: { name: 'smooth' },
-                router: { name: 'orthogonal' }
-            });
+    // // Create links
+    // extendedOps.forEach((op, index) => {
+    //     op.parents.forEach(parentIndex => {
+    //         const source = idMap.get(`op-${parentIndex}`);
+    //         const target = idMap.get(`op-${index}`);
+    //         if (!source || !target) return;
 
-            links.push(link);
-        });
-    });
+    //         const link = new shapes.standard.Link({
+    //             source: { id: `op-${parentIndex}` },
+    //             target: { id: `op-${index}` },
+    //             attrs: {
+    //                 line: {
+    //                     stroke: '#999',
+    //                     strokeWidth: 2,
+    //                     targetMarker: {
+    //                         type: 'path',
+    //                         d: 'M 10 -5 0 0 10 5 z',
+    //                         fill: '#333'
+    //                     }
+    //                 }
+    //             },
+    //             connector: { name: 'smooth' },
+    //             router: { name: 'orthogonal' }
+    //         });
 
-    graph.resetCells([...elements, ...links]);
+    //         links.push(link);
+    //     });
+    // });
+
+    // graph.resetCells([...elements, ...links]);
 }
 
 function calculateDepth(log: { ops: { parents: number[] }[] }): number[] {
@@ -521,33 +347,6 @@ function calculateDepth(log: { ops: { parents: number[] }[] }): number[] {
 
     return depths;
 }
-
-// export function calculateDepth(log: OpLog<string>): number[] {
-//     const depthMap: number[] = [];
-
-//     function dfs(index: number): number {
-//         if (depthMap[index] != null) {
-//             return depthMap[index];
-//         }
-
-//         const op = log.ops[index];
-//         if (op.parents.length === 0) {
-//             depthMap[index] = 0;
-//         } else {
-//             depthMap[index] = 1 + Math.max(...op.parents.map(dfs));
-//         }
-
-//         return depthMap[index];
-//     }
-
-//     for (let i = 0; i < log.ops.length; i++) {
-//         dfs(i);
-//     }
-
-//     console.log(depthMap)
-
-//     return depthMap;
-// }
 
 function drawItem(
     item: FugueItem,
